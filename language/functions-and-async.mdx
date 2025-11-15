@@ -1,8 +1,253 @@
 ---
 title: "函数与异步"
-description: "函数定义、调用以及 async/await 机制"
+description: "函数定义、调用与异步基础"
 ---
 
-# 函数与异步
+在 Fluxon 中，**函数** 用于封装可复用的计算逻辑，**异步函数** 则用于与 I/O、定时器或外部系统进行非阻塞交互。本章介绍函数的定义、调用方式，以及 `async`/`await` 相关的异步语法。
 
-> 内容待补，将涵盖函数体形式、异步定义与 await 使用方式。
+## 函数基础
+
+### 定义函数
+
+Fluxon 使用 `def` 关键字定义函数，形如：
+
+```ruby Fluxon
+def add(a, b) = &a + &b
+```
+
+要点：
+
+- 参数列表括在 `()` 中，多个参数使用逗号分隔。
+- `=` 右侧是一个表达式，作为函数体的**返回值**。
+- 在函数体内部需要通过 `&a`、`&b` 读取参数的值，与读取普通变量的规则完全一致。
+
+当函数逻辑较复杂时，可以使用大括号包裹多条语句：
+
+```ruby Fluxon
+def max(a, b) = {
+	if &a >= &b then &a else &b
+}
+```
+
+在块体形式中：
+
+- 可以声明中间变量、使用循环与分支。
+- 最后一条 `return` 或表达式的值会作为函数的返回结果（见下文）。
+
+### 调用函数
+
+定义函数后，可以像其他语言一样通过 `name(arg1, arg2)` 语法调用：
+
+```ruby Fluxon
+result = add(1, 2)
+best = max(&x, &y)
+```
+
+调用时注意：
+
+- 调用点传入的参数是普通表达式，可以是字面量、变量引用、函数调用等。
+- 传参时**不需要**在函数名或参数名上写 `&`，只有在函数体内部访问参数与外部变量时才需要 `&`。
+
+函数同样可以作为值进行传递或存储在映射、列表中（取决于运行时能力与宿主集成），具体能力以函数目录与运行时文档为准。
+
+### 提前返回
+
+在块体函数中，`return` 可用于提前返回：
+
+```ruby Fluxon
+def abs(n) = {
+	if &n >= 0 {
+		return &n
+	}
+	return -&n
+}
+```
+
+与控制流章节中的示例一致：
+
+- `return` 会立即结束当前函数执行，后续语句不会再运行。
+- 如果函数体中没有显式的 `return`，则最后一个表达式的值会作为返回结果；若函数体为空，则返回 `null`（具体行为以实现为准）。
+
+## 异步基础
+
+### 异步函数
+
+Fluxon 提供 `async def` 语法定义异步函数，用于发起非阻塞操作，例如 HTTP 调用、数据库访问或等待定时器：
+
+```ruby Fluxon
+async def fetchUser(id) = {
+	response = http-get("/users/" + &id)
+	return &response
+}
+```
+
+<Warning>示例中的 `http-get` 作为虚构函数，仅用于说明异步调用形态。</Warning>
+
+`async def` 定义的函数在调用时会返回一个「异步句柄」（通常对应底层 `Future` 或 `CompletableFuture`），要获取异步结果，通常需要配合 `await` 语句。
+
+如果异步函数仅包含单个表达式，也可以写成简写形式：
+
+```ruby Fluxon
+async def delay(ms) = sleep(&ms)
+```
+
+### 等待与结果获取
+
+在支持 `await` 的上下文中，可以通过 `await` 等待异步结果完成，再继续后续计算。例如：
+
+```ruby Fluxon focus={2}
+async def loadAndLog(id) = {
+	user = await fetchUser(&id)
+	log("loaded user: " + &user.name)
+	return &user
+}
+```
+
+<Warning>示例中的 `fetchUser` 与 `log` 作为虚构函数，仅用于说明异步调用形态。</Warning>
+
+### 异步与控制流
+
+由于 Fluxon 的控制结构本身就是表达式，因此可以自然地与异步函数组合使用：
+
+```ruby Fluxon
+async def loadAll(ids) = {
+	results = []
+	for id in &ids {
+		user = await fetchUser(&id)
+		results += [&user]
+	}
+	return &results
+}
+```
+
+可以在 `when`、`if` 或循环内部使用 `await`：
+
+```ruby Fluxon
+async def loadWithFallback(id) = {
+	user = await fetchUser(&id)
+	when &user.status {
+		"ok" -> return &user
+		"not-found" -> return await fetchGuestUser()
+		else -> return null
+	}
+}
+```
+
+<Warning>示例中的 `fetchUser` 与 `fetchGuestUser` 作为虚构函数，仅用于说明异步调用形态。</Warning>
+
+## 上下文调用
+
+除了普通的函数调用外，Fluxon 还提供 **上下文调用**，用于把某个值临时设为 “当前目标”，在其基础上调用扩展函数。例如，给玩家发送一个信息，可以写作 `&player::sendMessage("Hello")`，而不是 `sendMessage(&player, "Hello")`。
+
+### 基本语法
+
+```ruby Fluxon
+target :: func(args...)
+```
+
+- `target`：任意表达式的结果，会被设置到运行时环境的 `target` 槽位中。
+- `func(args...)`：在该 `target` 作为目标的上下文中执行的表达式，通常是扩展函数调用。
+
+示例：
+
+```ruby Fluxon focus={3}
+import 'fs:time'
+
+time :: formatTimestamp(1755611940830L)
+```
+
+如果 `fs:time` 库提供了 `formatTimestamp` 扩展函数，它会在 `time` 这个上下文中被调用，并返回格式化后的字符串。
+
+### 链式上下文调用
+
+`::` 可以多次连续使用，前一个上下文的结果会作为下一个上下文调用的 `target`：
+
+```ruby Fluxon focus={3}
+import 'fs:time'
+
+time :: formatTimestamp(1755611940830L) :: split("-")
+```
+
+含义近似于：
+
+```ruby Fluxon
+parts = split(formatTimestamp(time, 1755611940830L), "-")
+```
+
+<Warning>这个例子仅用于说明链式调用的效果，不代表可以等价于这种写法</Warning>
+
+常见的链式模式：
+
+- 对字符串做一系列转换：
+
+	```ruby Fluxon
+	text = 'hello world'
+	&text :: uppercase() :: split(' ')
+	```
+
+- 对集合进行多步操作：
+
+	```ruby Fluxon
+	list = [1, 2, 3]
+	&list :: size() :: toString()
+	```
+
+### 与引用 `&` 的组合
+
+上下文调用经常与引用操作符 `&` 一起使用，把某个变量的当前值作为上下文目标：
+
+```ruby Fluxon
+list = [1, 2, 3]
+&list :: contains(1)
+```
+
+<Note>该语法的解析顺序是 **先取引用，再做上下文调用**，即 `(&list) :: contains(1)`。</Note>
+
+同样地，可选引用也能与上下文调用搭配：
+
+```ruby Fluxon
+(&?list ?: []) :: size()
+```
+
+若 `list` 未定义或为 `null`，`&?list` 会产生 `null`，再通过 `?:` 提供默认空列表，最终对 `[]` 调用 `size()`。
+
+### 与 Elvis / 条件等操作符的配合
+
+上下文调用本质上仍是一个普通表达式结果，因此可以和 Elvis、条件表达式等组合：
+
+```ruby Fluxon highlight={3,5}
+list = [1, 2, 3]
+
+has = &list :: contains(1) ?: false
+
+if &list :: size() > 2 then 'large' else 'small'
+```
+
+也可以先通过 Elvis 构造安全的默认值，再做上下文调用：
+
+```ruby Fluxon
+list = null
+(&list ?: [1]) :: contains(1)
+```
+
+### 代码块形式的上下文调用
+
+`::` 右侧除了可以是单个调用表达式，还可以是一个代码块 `{ ... }`。在代码块内，多条语句都会在同一个 `target` 上下文中执行：
+
+```ruby Fluxon highlight={4}
+import 'fs:time'
+
+time :: {
+	formatted = formatTimestamp(1755611940830L)
+	parts = &formatted :: split(' ')
+	&parts
+}
+```
+
+在上例中：
+
+- 进入 `{ ... }` 时，运行时会把 `time` 设置为当前上下文目标。
+- 块内可直接调用与 `time` 相关的扩展函数，例如 `formatTimestamp`。
+- 块执行完毕后，原来的上下文目标会自动恢复（不会泄漏到块外）。
+
+<Note>实现上，解释器会在进入上下文调用时保存旧的 `target`，把 `target` 设为 `::` 左侧表达式的结果，执行完右侧表达式或代码块后再恢复旧值。字节码生成器也遵循同样的逻辑。</Note>

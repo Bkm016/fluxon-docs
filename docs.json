@@ -44,8 +44,9 @@
             "pages": [
               "language/literals-and-types",
               "language/variables-and-references",
-              "language/functions-and-async",
-              "language/control-flow"
+              "language/operators-and-priority",
+              "language/control-flow",
+              "language/functions-and-async"
             ]
           },
           {
