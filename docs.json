@@ -1,87 +1,129 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Fluxon Docs",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#633B92",
+    "light": "#7E5BEF",
+    "dark": "#4C3A8E"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/favicon.ico",
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "指南",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "概览",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "index"
             ]
           },
           {
-            "group": "Customization",
+            "group": "快速入门",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "guides/installation",
+              "guides/quickstart",
+              "guides/cli"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "工具与生态",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "tooling/vscode",
+              "tooling/catalog",
+              "tooling/mintlify"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "语言参考",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "核心概念",
             "pages": [
-              "api-reference/introduction"
+              "language/literals-and-types",
+              "language/variables-and-references",
+              "language/functions-and-async",
+              "language/control-flow"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "内置与模式",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "language/builtins",
+              "language/special-features"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "运行时与嵌入",
+        "groups": [
+          {
+            "group": "架构",
+            "pages": [
+              "runtime/architecture",
+              "runtime/concurrency"
+            ]
+          },
+          {
+            "group": "集成",
+            "pages": [
+              "runtime/cli-runtime",
+              "runtime/jsr223",
+              "runtime/java-integration"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "开发者指南",
+        "groups": [
+          {
+            "group": "参与贡献",
+            "pages": [
+              "developer/contributing",
+              "developer/documentation"
+            ]
+          },
+          {
+            "group": "质量与交付",
+            "pages": [
+              "developer/testing",
+              "developer/release",
+              "developer/best-practices"
+            ]
+          },
+          {
+            "group": "运维与排查",
+            "pages": [
+              "developer/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "附录",
+        "groups": [
+          {
+            "group": "参考",
+            "pages": [
+              "appendix/cli-reference",
+              "appendix/function-catalog"
+            ]
+          },
+          {
+            "group": "资源",
+            "pages": [
+              "appendix/glossary"
             ]
           }
         ]
       }
     ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
+    "global": {}
   },
   "logo": {
     "light": "/logo/light.svg",
@@ -98,20 +140,12 @@
   "contextual": {
     "options": [
      "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
+     "view"
    ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/mintlify"
     }
   }
 }
