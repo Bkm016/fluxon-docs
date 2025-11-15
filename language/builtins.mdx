@@ -1,6 +1,223 @@
 ---
 title: "内置函数"
-description: "系统、数学、时间与编码函数概览"
 ---
 
-# 内置函数
+内置函数由运行时在启动时自动注册，主要分为：
+
+- **系统函数**：与控制台、反射、异常有关，由 `FunctionSystem` 提供。
+- **数学函数**：常用数值运算与随机数，由 `FunctionMath` 提供。
+- **类型函数**：类型转换与类型信息，由 `FunctionType` 提供。
+
+本页只列出这三大核心函数库中最常用且稳定的能力，完整清单可参考函数目录与版本发布说明。
+
+<Note>
+所有示例均使用 Fluxon 语法，`#` 开头为注释，`=>` 表示求值结果（说明用，不是语法内容）。
+</Note>
+
+## 系统函数（FunctionSystem）
+
+系统函数不带命名空间，直接按名称调用。
+
+### 输出与错误
+
+| 函数 | 签名 | 说明 |
+| --- | --- | --- |
+| `print` | `print(value)` | 向标准输出打印一行文本，末尾自动换行。 |
+| `error` | `error(value)` | 向标准错误流打印一行文本，末尾自动换行。 |
+
+示例：
+
+```ruby Fluxon
+print("Hello Fluxon")     # => 在控制台打印 Hello Fluxon\n
+error("something wrong")  # => 在错误输出打印一行信息
+```
+
+### 睡眠与阻塞
+
+| 函数 | 签名 | 说明 |
+| --- | --- | --- |
+| `sleep` | `sleep(ms)` | 让当前线程睡眠指定毫秒数，期间会阻塞当前脚本执行。 |
+
+示例：
+
+```ruby Fluxon
+print("before")
+sleep(1000)               # 约 1 秒
+print("after")
+```
+
+### 反射与动态调用
+
+| 函数 | 签名 | 说明 |
+| --- | --- | --- |
+| `forName` | `forName(className)` | 加载指定的宿主类并返回对应 Class 对象。 |
+| `call` | `call(func)` / `call(func, args)` | 调用运行时函数或已获取的函数对象，可选以数组形式传入参数列表。 |
+
+示例：
+
+```ruby Fluxon
+# 通过名称调用已注册函数
+call("print", ["hello from call"])  # 等价于 print("hello from call")
+```
+
+### 抛出异常
+
+| 函数 | 签名 | 说明 |
+| --- | --- | --- |
+| `throw` | `throw(error)` | 直接抛出一个错误对象或把任意值包装为运行时异常抛出。 |
+
+```ruby Fluxon
+if &x < 0 {
+	throw("x must be non-negative")
+}
+```
+
+## 数学函数（FunctionMath）
+
+数学函数同样无需命名空间，可以直接使用；某些函数会尽量保持整数类型不被意外提升为浮点数（参见 `FunctionMath` 实现）。
+
+### 数学常量
+
+| 名称 | 类型 | 说明 |
+| --- | --- | --- |
+| `PI` | `double` | 圆周率常量 `Math.PI`。 |
+| `E` | `double` | 自然常数 `Math.E`。 |
+
+```ruby Fluxon
+print(&PI)
+print(&E)
+```
+
+### 比较与范围
+
+| 函数 | 签名 | 说明 |
+| --- | --- | --- |
+| `min` | `min(a, b)` | 返回较小的一个参数，支持可比较类型。 |
+| `max` | `max(a, b)` | 返回较大的一个参数，支持可比较类型。 |
+| `clamp` | `clamp(value, min, max)` | 将数值限制在 `[min, max]` 区间内，并尽量保持原始数值类型。 |
+
+```ruby Fluxon
+min(1, 2)                 # => 1
+max(1.5, 0.5)             # => 1.5
+clamp(10, 0, 5)           # => 5
+```
+
+### 绝对值与取整
+
+| 函数 | 签名 | 说明 |
+| --- | --- | --- |
+| `abs` | `abs(x)` | 绝对值，自动根据参数类型返回 `int` / `long` / `float` / `double`。 |
+| `round` | `round(x)` | 四舍五入到最接近的整数，返回整型数值。 |
+| `floor` | `floor(x)` | 向下取整，如 `3.9 -> 3`。 |
+| `ceil` | `ceil(x)` | 向上取整，如 `3.1 -> 4`。 |
+
+```ruby Fluxon
+abs(-3)                   # => 3
+round(3.5)                # => 4
+floor(3.9)                # => 3
+ceil(3.1)                 # => 4
+```
+
+### 三角函数
+
+所有三角函数接受弧度值作为输入：
+
+| 函数 | 签名 | 说明 |
+| --- | --- | --- |
+| `sin` | `sin(x)` | 正弦函数。 |
+| `cos` | `cos(x)` | 余弦函数。 |
+| `tan` | `tan(x)` | 正切函数。 |
+| `asin` | `asin(x)` | 反正弦，要求 `x` 在 `[-1, 1]` 范围内，否则抛出异常。 |
+| `acos` | `acos(x)` | 反余弦，要求 `x` 在 `[-1, 1]` 范围内，否则抛出异常。 |
+| `atan` | `atan(x)` | 反正切。 |
+
+```ruby Fluxon
+sin(PI / 2)               # => 1.0
+cos(0)                    # => 1.0
+```
+
+### 指数、对数与幂
+
+| 函数 | 签名 | 说明 |
+| --- | --- | --- |
+| `exp` | `exp(x)` | 计算 `e^x`。 |
+| `log` | `log(x)` | 自然对数，要求 `x > 0`，否则抛出异常。 |
+| `pow` | `pow(base, exponent)` | 幂运算；当指数与结果均为整数且有限时，尽量返回整数类型。 |
+| `sqrt` | `sqrt(x)` | 平方根，要求 `x > 0`，否则抛出异常。 |
+
+```ruby Fluxon
+pow(2, 10)                # => 1024
+sqrt(9)                   # => 3.0
+```
+
+### 随机数
+
+`random` 根据参数个数的不同，具有三种调用形式：
+
+| 调用 | 说明 |
+| --- | --- |
+| `random()` | 返回 `[0.0, 1.0)` 之间的双精度随机数。 |
+| `random(end)` | 若 `end` 为整数类型，则返回 `[0, end)` 内的整数；若为浮点，则返回 `[0.0, end)`。`end` 必须为正数。 |
+| `random(start, end)` | 在 `[start, end)` 区间生成随机数；若两端均为整数，则返回区间内整数，否则返回浮点数。要求 `start < end`。 |
+
+```ruby Fluxon
+random()                  # => 0.0 到 1.0 之间
+random(10)                # => 0 到 9 之间的整数
+random(5, 10)             # => 5 到 9（或 9.x）之间
+```
+
+### 角度与插值
+
+| 函数 | 签名 | 说明 |
+| --- | --- | --- |
+| `rad` | `rad(deg)` | 将角度转换为弧度。 |
+| `deg` | `deg(rad)` | 将弧度转换为角度。 |
+| `lerp` | `lerp(start, end, t)` | 线性插值，计算 `start + (end - start) * t`。 |
+
+```ruby Fluxon
+rad(180)                  # => PI
+deg(PI)                   # => 180.0
+lerp(0, 10, 0.25)         # => 2.5
+```
+
+## 类型函数（FunctionType）
+
+类型函数主要用于值的显式转换与类型信息获取。
+
+### 基础类型转换
+
+这些转换函数会尽量按运行时的转换规则进行解析，当转换失败时通常返回 `0` / `0L` / `0f` / `0d`：
+
+| 函数 | 签名 | 返回类型 | 说明 |
+| --- | --- | --- | --- |
+| `int` | `int(value)` | `int` | 尝试将值转换为整数。 |
+| `long` | `long(value)` | `long` | 尝试将值转换为长整型。 |
+| `float` | `float(value)` | `float` | 尝试将值转换为单精度浮点数。 |
+| `double` | `double(value)` | `double` | 尝试将值转换为双精度浮点数。 |
+| `string` | `string(value)` | `string` | 按运行时规则转为字符串；内部使用 `context.getString(0)`。 |
+
+```ruby Fluxon
+int("123")                # => 123
+double(1)                 # => 1.0
+string(&PI)               # => "3.141592653589793"（具体格式视宿主而定）
+```
+
+### 集合与类型信息
+
+| 函数 | 签名 | 返回类型 | 说明 |
+| --- | --- | --- | --- |
+| `array` | `array(collection)` | `Array` 或 `null` | 若参数是 `Collection`，则转为数组并返回；否则返回 `null`。 |
+| `typeOf` | `typeOf(value)` | `string` | 返回底层对象的简短类型名，例如 `"String"`、`"Integer"`；若为 `null`，返回字符串 `"null"`。 |
+
+```ruby Fluxon
+list = [1, 2, 3]
+arr = array(&list)        # => 数组副本
+typeOf(&arr)              # => "Object[]" 或宿主实际类型名
+
+typeOf(null)              # => "null"
+typeOf("hello")           # => "String"（具体取决于宿主）
+```
+
+---
+
+以上仅覆盖最核心的系统 / 数学 / 类型内置函数，其他内置库（如时间、文件、环境等）在对应章节与函数目录中有更完整的说明。
