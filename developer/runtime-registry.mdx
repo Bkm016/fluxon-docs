@@ -3,7 +3,13 @@ title: "运行时注册 API"
 description: "FluxonRuntime 中可用的函数/扩展注册入口"
 ---
 
-此文档直接基于 `core/src/main/java/org/tabooproject/fluxon/runtime/FluxonRuntime.java`，列出所有可调用的注册接口，帮助你在运行时新增函数、变量或扩展。
+基于 `FluxonRuntime.java` 的登记手册，帮助你在宿主启动时向脚本注入函数、变量或扩展。
+
+## 适用场景
+
+- 暴露宿主能力（文件/网络/游戏对象等）给脚本。
+- 设置函数的线程模型（异步或主线程）。
+- 在不改核心源码的情况下增量添加命名空间或扩展函数。
 
 ## 单例访问
 
@@ -11,48 +17,49 @@ description: "FluxonRuntime 中可用的函数/扩展注册入口"
 FluxonRuntime runtime = FluxonRuntime.getInstance();
 ```
 
-- `newEnvironment()`：创建新的解释器环境（会自动 bake 缓存）。
+- `newEnvironment()`：创建新的解释器环境（自动 bake 缓存）。
 - `getSystemFunctions()` / `getExtensionFunctions()` / `getSystemVariables()`：调试或导出当前注册表。
-- `setPrimaryThreadExecutor(Executor executor)`：替换主线程执行器，供 `isPrimarySync` 函数使用。
+- `setPrimaryThreadExecutor(Executor executor)`：替换主线程执行器，供主线程函数使用。
 
 ## 函数注册
 
 | 方法 | 用途 |
 | --- | --- |
-| `registerFunction(name, paramCount, callable)` | 注册同步函数。可传入 `List<Integer>` 支持多种参数个数。 |
+| `registerFunction(name, paramCount, callable)` | 注册同步函数；可用 `List<Integer>` 支持多种参数个数。 |
 | `registerFunction(namespace, name, paramCount, callable)` | 带命名空间的函数，例如 `fs:crypto`。 |
-| `registerAsyncFunction(...)` | 注册异步函数，`Function#isAsync()` 为 `true`。 |
-| `registerPrimarySyncFunction(...)` | 标记为主线程执行（`isPrimarySync = true`）。 |
+| `registerAsyncFunction(...)` | 异步函数，`Function#isAsync()` 为 `true`。 |
+| `registerPrimarySyncFunction(...)` | 主线程函数，`isPrimarySync = true`。 |
 | `registerVariable(name, value)` | 注入全局变量，可在脚本中直接访问。 |
 
-所有注册操作都会把内部脏标记设为 `true`，下一次 `newEnvironment()` 前自动重建缓存。
+每次注册都会设置脏标记，下一次 `newEnvironment()` 时自动重建缓存数组。
 
-## 扩展函数
+## 扩展函数（`target::method()`）
 
 ### Builder 链式注册
 
 ```java
 runtime.registerExtension(File.class, "fs:io")
        .function("readText", 0, ctx -> ...)
-       .function("writeText", 1, ctx -> ...);
+       .async("copyTo", Arrays.asList(1, 2), ctx -> ...)
+       .primarySync("deleteRecursively", 0, ctx -> ...);
 ```
-
-`ExtensionBuilder` 仅是语法糖，底层仍调用 `registerExtensionFunction`。
 
 ### 直接注册
 
 | 方法 | 说明 |
 | --- | --- |
-| `registerExtensionFunction(Class<T> type, String name, int paramCount, callable)` | 同步扩展函数。 |
-| `registerExtensionFunction(type, namespace, name, List<Integer>, callable)` | 带命名空间及多参数版本。 |
-| `registerAsyncExtensionFunction(...)` | 异步扩展函数。 |
-| `registerSyncExtensionFunction(...)` | 主线程扩展函数。 |
+| `registerExtensionFunction(type, name, int|List<Integer>, callable)` | 同步扩展，命名空间可为 `null`。 |
+| `registerAsyncExtensionFunction(...)` | 异步扩展。 |
+| `registerSyncExtensionFunction(...)` | 主线程扩展。 |
 
-扩展函数也参与 `fluxon-functions.json` 导出，供 IDE/文档消费。
+扩展函数同样参与 `fluxon-functions.json` 导出，供 IDE/文档消费。
 
 ## 变量与全局对象
 
-- `registerVariable("g", GlobalObject.INSTANCE)`：运行时默认注册一个 `g` 函数返回 `GlobalObject`，供上下文调用使用。
-- 任意 `registerVariable` 注入的对象都可通过 `Environment#getRootVariables()` 查看。
+- 运行时默认通过 `registerVariable("g", GlobalObject.INSTANCE)` 注册 `g()`，便于上下文调用。
+- 其他全局对象可通过 `Environment#getRootVariables()` 验证。
 
-通过以上 API，可以在不修改核心源码的情况下，向 Fluxon runtime 注入新的系统能力。
+## 调试与导出
+
+- 直接打印 `runtime.getSystemFunctions()` / `getExtensionFunctions()` 查看注册结果。
+- 使用 `./gradlew :core:dumpFluxonCatalog` 导出最新函数目录，保持 VS Code 补全与文档同步。

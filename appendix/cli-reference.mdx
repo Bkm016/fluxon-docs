@@ -5,4 +5,72 @@ description: "Fluxon 命令行参数与示例"
 
 # CLI 参考
 
-> 内容待补，将列出命令、参数及常见用法。
+Fluxon 提供两个主要的命令行入口：交互式控制台（`core-console`）与函数目录导出器（`FunctionDumper`）。以下列出它们的启动方式、可用命令以及常见 Gradle 任务，便于在本地快速验证或集成。
+
+## 控制台（core-console）
+
+构建并启动交互式 REPL：
+
+```bash
+# Linux/macOS
+./gradlew :core-console:installDist && ./core-console/build/install/core-console/bin/core-console
+
+# Windows PowerShell
+./gradlew :core-console:installDist; .\core-console\build\install\core-console\bin\core-console.bat
+```
+
+快速试用也可以直接运行：
+
+```bash
+./gradlew :core-console:run
+```
+
+控制台不接受额外启动参数，会自动在用户主目录创建 `.fluxon_history` 记录历史。调试时可以在语句前加 `$`，输出词法/语法树和伪代码。
+
+### 内置命令
+
+| 输入 | 作用 |
+| --- | --- |
+| `:q` / `:quit` / `:exit` | 退出控制台 |
+| `:c` / `:clear` | 清空当前缓存的脚本行 |
+| `:l` / `:list` | 按行号列出本次会话输入的语句 |
+| `:v` / `:vars` | 查看当前环境变量（含 `_` 返回值） |
+| `:h` / `:help` | 显示命令速览 |
+| `clear` | 清屏 |
+| `Ctrl+C` | 取消当前行并清空缓存 |
+| `Ctrl+D` | 结束程序 |
+
+## 函数目录导出（FunctionDumper）
+
+构建阶段自动注册的系统函数与扩展函数可以导出为 JSON 目录，供 VS Code 补全和文档使用：
+
+```bash
+./gradlew :core:dumpFluxonCatalog
+# 生成 core/build/fluxon-functions.json
+```
+
+导出器本身支持自定义输出路径：
+
+```bash
+./gradlew :core:jar
+java -cp core/build/libs/fluxon-core-*.jar org.tabooproject.fluxon.tool.FunctionDumper ./out/catalog.json
+```
+
+参数说明：
+
+| 参数 | 说明 |
+| --- | --- |
+| *(空)* | 默认写入 `build/fluxon-functions.json` |
+| `<path>` | 第一个参数指定输出文件路径（父目录会自动创建） |
+
+## 常见 Gradle 任务速览
+
+| 任务 | 作用 |
+| --- | --- |
+| `:core-console:run` | 启动交互式 REPL（使用当前源码编译的类） |
+| `:core-console:installDist` | 生成可分发的控制台脚本，位于 `core-console/build/install/core-console/bin/` |
+| `:core:dumpFluxonCatalog` | 导出运行时函数目录 JSON |
+| `test` / `:core:test` | 运行单元测试（JUnit 5） |
+| `jmh` | 运行基于 JMH 的性能基准（`ParserJmhBenchmark` 等） |
+
+上述命令均在仓库根目录执行，无需预装额外工具，Gradle Wrapper 会自动处理依赖。

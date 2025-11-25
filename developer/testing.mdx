@@ -5,4 +5,52 @@ description: "单元测试、性能测试与 JFR 使用"
 
 # 测试与质量
 
-> 内容待补，将介绍 `EnhancedParserTest`、JMH/JFR 及覆盖率策略。
+Fluxon 的测试集中在 `core/src/test/java`，覆盖解析、解释/编译一致性、运行时缓存与扩展调用。下面列出主要分组、运行方式与补充建议。
+
+## 测试分组与入口
+
+- **解析器**：`parser/*`（如 `EnhancedParserTest`, `ErrorRecoveryTest`, `ParserTest`）验证词法/语法与错误恢复能力。
+- **解释器与字节码**：`interpreter/*` 与 `interpreter/bytecode/*` 对比解释执行与编译执行结果（使用 `FluxonTestUtil.runSilent`），涵盖上下文调用、索引、异步、异常等。
+- **运行时**：`runtime/EnvironmentCacheTest` 检查函数/扩展缓存烘焙与脏标记策略。
+- **JSR-223**：`core-jsr223/src/test/java` 下的 `FluxonScriptEngineTest` 覆盖脚本引擎行为。
+- **基准测试**：`benchmark/*` 提供 JUnit 版性能测试与 JMH 基准。
+
+运行全部测试：
+
+```bash
+./gradlew test
+```
+
+按类运行（示例）：
+
+```bash
+./gradlew test --tests org.tabooproject.fluxon.interpreter.ContextCallTest
+```
+
+## 解释/编译一致性
+
+`FluxonTestUtil` 提供便捷方法：
+
+- `run(source)` / `runSilent(source)`：先解释执行，再编译执行并比较返回值，返回 `TestResult`。
+- `interpret(source)`：仅解释执行。
+
+注意：`runSilent` 会将编译产物写入 `dump/TestScript.class`，长期运行前可清理该目录。
+
+编写新测试时，优先覆盖**解释与编译双路径**，确保优化或新语法不会在两种执行模式下出现差异。
+
+## 性能与基准
+
+- `ParserPerformanceTest`：JUnit 版性能抽样，适合本地快速对比。
+- `ParserJmhBenchmark`：专业基准，运行方式：`./gradlew jmh`。默认配置在 `build.gradle.kts` 的 `jmh` 块中，可按需调整迭代/预热。
+- `SimpleFluxonJexlBenchmark`：对比 Fluxon 与 JEXL 的性能。
+
+如需进一步分析，可使用 JFR 记录（仓库 `jfr/` 已有样例），或在基准脚本里增加自定义场景。
+
+## 覆盖新增功能的建议
+
+- 新增运行时函数或扩展：添加对应的执行路径测试，并在需要时更新 `FluxonRuntimeTest.registerTestFunctions` 供解析测试使用。
+- 新语法/运算符：在 `parser` 与 `interpreter` 两侧各添加至少一个用例，覆盖正常路径与错误路径。
+- 并发/异步逻辑：使用 `ThreadPoolManager#getActiveTaskCount()` 或主线程执行器相关的断言，防止任务泄漏或线程模型回归。
+- 工具链（函数目录、控制台）：可通过集成测试或快照验证生成的 JSON/命令输出与预期一致。
+
+保持测试与文档同步，当 `fluxon-functions.json` 或 API 行为变更时一并更新说明，可以显著降低补全与运行时不一致的风险。

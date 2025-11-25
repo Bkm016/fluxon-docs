@@ -3,34 +3,34 @@ title: "运行时配置与调试"
 description: "主线程执行器、线程池、函数目录等可调整点"
 ---
 
-本页聚焦 `FluxonRuntime` 与周边核心类对外暴露的配置项，方便开发者在集成时调整执行环境。
+`FluxonRuntime` 可调整线程模型与导出资产；`ThreadPoolManager` 管理异步执行。本页汇总常用开关与调试手段。
 
 ## 主线程执行器
 
-- 默认使用 `Executors.newSingleThreadExecutor()`。
-- 可通过 `FluxonRuntime#setPrimaryThreadExecutor(Executor executor)` 替换，例如绑定到游戏主线程或 UI 线程。
-- 所有通过 `registerPrimarySyncFunction` 或 `registerSyncExtensionFunction` 注册的函数都会路由到该执行器。
+- 默认：`Executors.newSingleThreadExecutor()`。
+- 自定义：`FluxonRuntime#setPrimaryThreadExecutor(Executor executor)`，常用于绑定游戏/GUI 主线程。
+- 生效范围：通过 `registerPrimarySyncFunction` / `registerSyncExtensionFunction` 注册的函数。
 
 ## 线程池管理器
 
-- `ThreadPoolManager` 控制异步任务与调度任务。
-- 暴露 `submitAsync`, `runAsync`, `schedule`, `scheduleAtFixedRate`, `shutdown`。
-- 可在嵌入环境中自定义包装，或根据宿主需求在 `shutdown` 之前等待任务完成。
+- 位于 `runtime/concurrent/ThreadPoolManager`，负责异步/调度任务。
+- 能力：`submitAsync`、`runAsync`、`schedule`、`scheduleAtFixedRate`、`shutdown`，以及 `getActiveTaskCount()` 观测任务堆积。
+- 策略：队列满时启用 `CallerRunsPolicy`，需评估宿主线程承受能力。
 
 ## 函数目录导出
 
-- `./gradlew :core:dumpFluxonCatalog` 生成 `core/build/fluxon-functions.json`。
-- `vscode-extension/scripts/sync-catalog.js` 可复制到扩展数据目录供补全使用。
-- JSON 包含 `generatedAt`, `system`, `extensions`，每个函数带 `namespace`, `params`, `async`, `primarySync`。更新函数后务必重跑该命令。
+- 命令：`./gradlew :core:dumpFluxonCatalog` 输出 `core/build/fluxon-functions.json`。
+- 同步：`vscode-extension/scripts/sync-catalog.js` 复制到扩展数据目录，驱动补全。
+- 字段：`generatedAt`, `system`, `extensions`, `params`, `async`, `primarySync`。新增/改名后务必重跑。
 
 ## 环境调试
 
-- `Environment#getRootFunctions()` / `getRootExtensionFunctions()` / `getRootVariables()`：在脚本中快速打印当前注册内容。
-- 结合 `FunctionContext#toString()` 可以定位函数调用的 target 与参数。
-- `FluxonRuntime#getSystemVariables()` 可检查全局对象（例如 `GlobalObject`）。
+- `Environment#getRootFunctions()` / `getRootExtensionFunctions()` / `getRootVariables()`：检查脚本可见符号。
+- `FunctionContext#toString()`：定位 target 与实参。
+- `FluxonRuntime#getSystemVariables()`：查看全局对象（如 `GlobalObject`）。
 
-## FAQ
+## 常见问题
 
-1. **为何新增函数没有生效？** 记得调用注册 API 后重新创建环境或执行 `runtime.newEnvironment()`。
-2. **主线程函数仍在后台执行？** 检查是否正确调用了 `registerPrimarySyncFunction`，并确认主线程执行器已替换。
-3. **线程池阻塞**：若出现 `CallerRunsPolicy` 退回到调用线程，说明任务太多，应拆分或增加宿主线程资源。
+1. **新增函数未生效？** 注册后需重新 `newEnvironment()` 触发 bake。
+2. **主线程函数仍跑在后台？** 核对是否使用 `registerPrimarySyncFunction`/`registerSyncExtensionFunction`，并确认替换了主线程执行器。
+3. **异步堵塞？** `CallerRunsPolicy` 出现表示队列已满，需拆分任务或扩容宿主线程资源。

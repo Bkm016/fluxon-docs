@@ -5,4 +5,40 @@ description: "如何在多个渠道保持文档同步"
 
 # 文档协作流程
 
-> 内容待补，将说明 Mintlify、`SYNTAX.md` 与 VS Code README 的协作方式。
+Fluxon 的知识源同时存在于源码、测试、Mintlify 文档以及 VS Code 扩展。下面的流程帮助你在修改功能时同步更新这些出口，避免“代码行为已变，但文档/补全仍沿用旧版本”的情况。
+
+## 内容来源与分工
+
+- **源码与测试**：始终是唯一事实来源。新增语法或函数时优先补齐测试（如 `ContextCallTest`、`EnvironmentCacheTest`）。
+- **语言参考**：`mintlify-docs/language/*` 拆分自语法说明（原 `SYNTAX` 文档），涵盖字面量、引用、上下文调用、异步等核心特性。
+- **工具与生态**：`tooling/*` 描述 VS Code 扩展与函数目录生成流程，直接依赖 `fluxon-functions.json`。
+- **开发者指南**：`developer/*` 记录运行时 API、扩展、发布与故障排查。
+- **VS Code README**：位于 `vscode-extension/README.md`，面向插件用户，需与 `tooling/vscode.mdx` 保持一致。
+
+## 修改流程（建议）
+
+1. **实现与测试**：完成代码与测试后，确认新增/变更的公共接口、线程模型或语法点。
+2. **更新函数目录**：运行 `./gradlew :core:dumpFluxonCatalog`，并用 `vscode-extension/scripts/sync-catalog.js` 将 JSON 同步到扩展数据目录。
+3. **同步文档**：
+   - 语法或运行时行为：更新 `language/*`、`runtime/*` 或 `developer/*` 对应页面。
+   - 工具链影响（补全、CLI）：更新 `tooling/*` 与附录。
+   - 面向使用者的快速说明：必要时补充 `guides/*`。
+4. **校对交叉引用**：检查导航 (`docs.json`) 与页面内跳转是否仍然指向正确章节，示例代码与实际 API 一致。
+5. **预览**：在 `mintlify-docs` 目录运行 `pnpm exec mint dev`（或全局 `mint dev`）查看站点；VS Code 扩展可通过 `pnpm run watch` + `F5` 预览。
+
+## 写作与格式
+
+- 使用与源码一致的命名、参数个数与命名空间，避免臆测；引用 Java 类时注明包或文件路径（如 `FluxonRuntime.java`）。
+- 代码片段尽量可直接运行，涉及外部任务时给出完整命令（如 `./gradlew :core-console:run`）。
+- 当某功能依赖生成资产（函数目录、字节码 dump 等），在文档中明确“何时需要重新生成”。
+- 保持语言一致性：面向开发者的页面使用精简中文+少量英文关键字；避免与 VS Code README 冲突。
+
+## 版本发布后的同步
+
+发布前后需确认：
+
+- `gradle.properties` 的 `version` 已更新并在文档中体现。
+- `fluxon-functions.json` 与 VS Code 扩展数据已刷新。
+- Mintlify 部署（或静态导出）运行无误，截图/路径未指向旧版本。
+
+遵循以上步骤即可让源码、补全与文档在同一节奏演进，减少用户困惑与维护成本。

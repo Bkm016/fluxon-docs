@@ -5,4 +5,41 @@ description: "参与 Fluxon 核心开发的流程与要求"
 
 # 贡献指南
 
-> 内容待补，将列出代码规范、提交流程与沟通渠道。
+面向核心代码、工具链与文档的统一贡献流程。遵循以下约定可以减少往返沟通，加速合并。
+
+## 仓库结构速览
+
+- `core`：语言解析、解释器、编译器与运行时的主模块。
+- `core-console`：JLine 实现的 REPL，主要用于本地调试和演示。
+- `core-jsr223`：`ScriptEngine` 实现，依赖 `core`。
+- `vscode-extension`：VS Code 补全/高亮扩展，依赖 `fluxon-functions.json`。
+- `mintlify-docs`：当前文档站点。
+
+## 开发环境
+
+- JDK 8（Gradle Toolchain 已锁定）。
+- Gradle Wrapper（无需额外安装），常用命令：`./gradlew test`、`./gradlew :core:dumpFluxonCatalog`。
+- 可选：Node.js + pnpm，用于 VS Code 扩展与 Mintlify 预览。
+
+## 推荐工作流
+
+1. **拉取最新主分支**，创建功能分支。
+2. **修改核心逻辑** 时，优先通过 `FluxonRuntime` 的注册 API（`registerFunction` / `registerExtensionFunction` / `ExportRegistry`），确保脏标记与缓存正确更新。
+3. **同步工具链**：新增或修改函数后，运行 `./gradlew :core:dumpFluxonCatalog` 并用 `vscode-extension/scripts/sync-catalog.js` 更新补全数据。
+4. **补充测试与文档**：在 `core/src/test/java/...` 添加覆盖（可用 `FluxonTestUtil.runSilent` 对比解释/编译结果）；更新 Mintlify 对应章节。
+5. **自查**：`./gradlew test`（必要时 `jmh`/性能测试），确认无新增警告或未跟踪文件（如 `dump/TestScript.class`）。
+6. 提交/PR 时附上变更要点、测试结果以及是否需要重新发布函数目录。
+
+## 代码规范与注意事项
+
+- 语言：Java 8，保持编码 UTF-8，避免非 ASCII 文字出现在源码（日志/注释除外）。
+- 函数重载请使用 `List<Integer>` 表达可接受的参数个数，或在导出类上使用 `@Optional`。
+- 异步能力应通过 `registerAsyncFunction` / `ThreadPoolManager`，避免阻塞式调用混入主线程函数。
+- 不要直接修改 `Environment` 内部缓存数组；通过 `FluxonRuntime` 注册接口让脏标记自动生效。
+- 测试优先沿用 JUnit 5，路径遵循现有分组：`parser`、`interpreter`、`runtime`、`jsr223`、`benchmark`。
+
+## 沟通与反馈
+
+- 提交 PR 时附带最小可复现示例或新增测试用例。
+- 若修改涉及 API 行为（函数签名、命名空间、线程模型），请在描述中提醒同步 VS Code 目录与文档。
+- 遇到运行时或补全不一致的问题，优先附上 `fluxon-functions.json` 与 `Environment#getRootFunctions()` 输出便于复现。

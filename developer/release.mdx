@@ -5,4 +5,52 @@ description: "构建、发布到 Maven 仓库与版本管理"
 
 # 发布流程
 
-> 内容待补，将描述 Gradle 发布、凭证配置与版本策略。
+从版本号更新到 Maven 发布的完整步骤，涵盖产物清单与常见注意事项。
+
+## 版本与产物
+
+- 版本号位于根目录 `gradle.properties` 的 `version`。发布前更新并提交。
+- 主要产物（`archiveBaseName`）：
+  - `fluxon-core`：核心库（含 `FunctionDumper`）。
+  - `fluxon-core-console`：REPL。
+  - `fluxon-core-jsr223`：JSR-223 脚本引擎。
+
+## 预发布检查
+
+1. `./gradlew clean test`（必要时运行 `jmh` 以确认性能无回退）。
+2. 如果调整了运行时函数/扩展，运行 `./gradlew :core:dumpFluxonCatalog` 并同步 VS Code 目录。
+3. 更新 Mintlify 文档与 VS Code README 中的版本或新功能描述。
+4. 确认没有遗留的调试输出、`dump/TestScript.class` 等临时文件。
+
+## Maven 发布
+
+发布仓库：`https://repo.tabooproject.org/repository/releases`，凭证通过 `taboolibUsername` / `taboolibPassword` 读取（可配置在 `~/.gradle/gradle.properties` 或命令行 `-P` 参数）。
+
+示例凭证配置：
+
+```properties
+taboolibUsername=your-username
+taboolibPassword=your-password
+```
+
+发布全部子模块：
+
+```bash
+./gradlew publish
+```
+
+或仅发布某个模块：
+
+```bash
+./gradlew :core:publish
+./gradlew :core-console:publish
+./gradlew :core-jsr223:publish
+```
+
+成功后，构建日志会显示上传的坐标 `org.tabooproject.fluxon:<artifactId>:<version>`。
+
+## 发布后同步
+
+- 将最新的 `fluxon-functions.json` 提交或分发给 VS Code 扩展使用者。
+- 打标签/创建 Release Notes，注明关键变更（新语法、线程模型调整等）。
+- 如有文档站点或扩展市场发布步骤，请在合并后触发部署，确保 README/截图与最新版本一致。

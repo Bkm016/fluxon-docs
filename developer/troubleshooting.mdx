@@ -3,207 +3,68 @@ title: "故障排查"
 description: "常见问题、错误信息与排查路径"
 ---
 
-本页按“解析 → 运行时 → 并发”三个阶段整理常见症状、异常类型以及推荐的排查手段。先确认异常类别，再结合下文的定位步骤，可迅速圈定问题根因。
+按“解析 → 分派 → 数据 → 并发”分层排查，直接对号入座后执行对应清单。
 
-| 阶段 | 典型异常 | 快速检查 |
+| 阶段 | 典型症状 | 立即检查 |
 | --- | --- | --- |
-| 语法/解析 | `MultipleParseException` | 调用 `formatDiagnostic()` 输出源码摘录；在 REPL 前加 `$` 查看 AST。 |
-| 运行时分派 | `FunctionNotFoundError`, `VariableNotFoundError` | 使用 `Environment#getRootFunctions()`/`#getRootVariables()` 核对注册表。 |
-| 参数/数据 | `ArgumentTypeMismatchError`, `IndexAccessError`, `VoidError` | 记录 `FunctionContext#toString()` 与 `IndexErrorType`，核实调用方入参。 |
-| 执行器/并发 | 主线程函数未切换、异步任务堆积 | 检查 `registerPrimarySyncFunction` 用法与 `ThreadPoolManager#getActiveTaskCount()`。 |
+| 解析 | `MultipleParseException` | `ex.formatDiagnostic()` 打印源码摘录；REPL 语句前加 `$` 查看 AST |
+| 分派 | `FunctionNotFoundError` / `EvaluatorNotFoundError` | `Environment#getRootFunctions()`/`getRootExtensionFunctions()`；命名空间与 target 类型是否匹配 |
+| 数据 | `ArgumentTypeMismatchError` / `VariableNotFoundError` / `IndexAccessError` / `VoidError` | `FunctionContext#toString()`、`availableVariables`、`IndexErrorType` |
+| 并发 | 主线程函数跑在后台 / 异步任务堆积 | `registerPrimarySyncFunction` 用法、`ThreadPoolManager#getActiveTaskCount()`、执行器配置 |
 
-## 解析阶段：MultipleParseException
+## 解析错误（MultipleParseException）
 
-`Parser#parse` 会在同一遍扫描中累积所有语法错误并通过 `MultipleParseException` 抛出。异常内含 `List<ParseException>` 与 `SourceExcerpt`，可直接输出格式化诊断：
+- `Parser#parse` 聚合所有语法错误；`ex.formatDiagnostic()` 可直接打印行列与源码摘录。
+- REPL 语句前加 `$`，控制台会输出词法/语法树，便于确认括号、`then/else` 是否成对。
+- 网络/数据库来源的脚本注意行尾统一，否则列号可能偏移。
 
-```java
-try {
-	parser.parse(script);
-} catch (MultipleParseException ex) {
-	log.error(ex.formatDiagnostic()); // 展示所有行列与源码上下文
-}
-```
-
-若在 `fluxon` 控制台中排查，可在语句前添加 `$`（参见《命令行与 REPL》），控制台会打印词法/语法树，方便比对括号、缩进或 `then/else` 搭配是否缺失。确保 `Parser#parse` 的输入经过完整换行分隔；如果脚本来源是网络/数据库，记得统一行结尾以避免列号偏移。
-
-**触发示例**
-
-```fluxon
-if (userScore > 10
-		print("bonus!")
-```
-
-```text
-Found 2 parse error(s):
-	1. missing ')' at line 1, column 20
-	2. unexpected 'print' at line 2, column 5
-
-	 1 | if (userScore > 10
-								 ^ missing ')'
-	 2 |     print("bonus!")
-		 |     ^ unexpected token here
-```
-
-## 函数与扩展分派
+## 调用分派问题
 
 ### FunctionNotFoundError
 
-`Intrinsics#callFunction` 在无法解析目标函数或扩展函数时抛出该异常，并携带 `environment`, `target`, `name`, `arguments`, `pos/exPos`。定位步骤：
-
-- 调用 `Environment#getRootFunctions().keySet()` 与 `getRootExtensionFunctions()`，确认函数是否真正注册；若缺失，重新执行 `FluxonRuntime#registerFunction` 或 `#registerExtensionFunction` 后 `runtime.newEnvironment()` 以触发 bake。
-- 检查命名空间前缀：`registerFunction("fs", "readText", ...)` 会在脚本内以 `fs:readText` 调用，缺少命名空间会造成匹配失败。
-- 扩展函数要求 `target` 类型与 `registerExtensionFunction(Class<T> type, ...)` 中的 `type` 一致；若脚本在 `null :: fn()` 上调用会走 `target = null` 路径，可利用异常消息中的 `Class#getSimpleName()` 判定实际对象。
-- 如需全局审计，可重新导出 `fluxon-functions.json`（`./gradlew :core:dumpFluxonCatalog`），核实 catalog 中确实存在该函数签名。
-
-**触发示例**
-
-```fluxon
-// 宿主忘记注册 "fs:readText"，脚本仍然调用
-print(fs:readText("config.json"))
-```
-
-```text
-FunctionNotFoundError: readText([config.json])
-	at Intrinsics.callFunction(Environment.java:146)
-```
-
-若是扩展函数 target 不匹配，则异常消息会包含 `List::` 前缀，例如 `List::append(["value"])`，提示当前 `target` 实际是 `java.util.ArrayList` 却未注册对应扩展。
+- 注册是否生效：`Environment#getRootFunctions()` / `getRootExtensionFunctions()` 查看；缺失则重新注册并调用 `runtime.newEnvironment()` 触发 bake。
+- 命名空间：`registerFunction("fs", "readText", …)` 对应脚本 `fs:readText`，漏前缀会直接失败。
+- target 类型：扩展函数要求 `target` 与注册类型一致；`null::fn()` 会因 target 为空而匹配不到。
+- 目录一致性：必要时重跑 `./gradlew :core:dumpFluxonCatalog`，确认导出的签名与预期一致。
 
 ### EvaluatorNotFoundError
 
-当表达式节点无对应 `Evaluator` 时抛出，常见于新增语法但未实现求值器。确认 `org.tabooproject.fluxon.runtime.function`/`index` 包中的注册是否覆盖新 AST 节点；若脚本只需禁用该语法，可在解析阶段提前抛自定义 `ParseException`，避免运行时才失败。
+新增语法未提供求值器导致。检查是否在 `runtime.function`/`index` 注册 evaluator；如果语法应被禁止，在解析阶段直接抛 `ParseException`，避免运行时才失败。
 
-**触发示例**
-
-```fluxon
-// 假设自定义 AST 新增 match/when 语法但未提供 Evaluator
-match value {
-	1 -> print("one")
-}
-```
-
-```text
-EvaluatorNotFoundError: No evaluator registered for node type MatchExpression
-```
-
-## 参数类型与数据约束
+## 数据与类型问题
 
 ### ArgumentTypeMismatchError
 
-`FunctionContext#getArgumentByType`、`getNumber`、`getFunction` 等助手在类型不符时抛出该异常。消息包含“参数索引 + 期望类型 + 实际内容”，`context.toString()` 还能打印函数名、target 与完整参数列表。
+- `FunctionContext#getNumber/getArgumentByType` 会在消息中标注参数索引与实际值；先核实脚本入参是否符合签名。
+- 多参数版本只检查参数个数，不会自动装箱；需要在实现内区分 `Number`/`String` 等类型。
+- 扩展函数建议先用 `hasArgument(idx)` 判空，避免 `null` 触发类型错误。
 
-诊断建议：
+### VariableNotFoundError
 
-- 首先确认脚本调用端的文字字面量或变量值确实满足 `Function` 声明的签名；若希望自动转换，可先通过 `Coerce` 工具类在函数实现内容错。
-- 注意 `registerFunction(name, List<Integer> paramCounts, callable)` 仅匹配参数个数，不会进行装箱/解箱；若函数同时支持 `Number` 与 `String`，需在实现里手动判别。
-- 在扩展函数中，可调用 `context.hasArgument(idx)` 先判断参数是否存在，避免 `null` 被误判为类型错误。
+- `:vars`（REPL）或 `Environment#getRootVariables()` 查看当前可见变量；确认作用域与命名是否一致。
+- 函数体中新增局部变量时，确保解析器同步更新 `localVariableNames`，否则赋值索引会错位。
 
-**触发示例**
+### IndexAccessError
 
-```fluxon
-// sum 期望两个数字，但第二个参数传入字符串
-sum(10, "oops")
-```
-
-```text
-ArgumentTypeMismatchError: 1, expect Number but got String (oops)
-	at FunctionContext.getNumber(FunctionContext.java:70)
-```
+- `OUT_OF_BOUNDS`：检查索引与集合大小。
+- `UNSUPPORTED_TYPE` / `UNSUPPORTED_SET_TYPE`：该类型未实现 `IndexAccessor`，需要添加实现或更换访问方式。
+- `NULL_TARGET`：目标为 `null`；脚本侧加判空或默认值（Elvis）再访问。
 
 ### VoidError
 
-任何试图在表达式中参与计算的 `Void` 结果都会触发 `VoidError`。通常由函数错误地返回 `Function.VOID` 却继续与数字或字符串相加导致。校验函数实现逻辑，确保仅在绝对需要忽略返回值的语句（如赋值）时返回 `Function.VOID`，否则改为返回实际计算结果或 `null`。
-
-**触发示例**
-
-```fluxon
-// resetPlayer 返回 Function.VOID，但调用方仍将其当作值参与计算
-resetPlayer() + 1
-```
-
-```text
-VoidError: Cannot use Void as value in expression resetPlayer() + 1
-```
-
-## 变量与作用域问题
-
-`VariableNotFoundError` 携带 `variableName`, `index` 与 `availableVariables`，关键步骤如下：
-
-- 在脚本侧使用 `:vars`（控制台）或 `Environment#getRootVariables()` 列出当前可用变量，检查命名是否一致，以及是否位于正确的作用域。
-- 若报错出现在函数内部，查看 `Environment#assign` 是否收到正确的局部变量索引；新插入的局部变量需要同步更新 `localVariableNames`。
-- 嵌套环境中访问根变量，请使用 `Environment#defineRootVariable` 或在调用前通过 `env.getRoot().getRootVariables()` 确认其存在。
-
-**触发示例**
-
-```fluxon
-print(userName)
-```
-
-```text
-VariableNotFoundError: userName, index: -1, available: [score, hp, _]
-	at Environment.getVariable(Environment.java:210)
-```
-
-如果脚本在函数内部引用了尚未声明的局部变量，`available` 列表会展示该作用域当前能看到的变量，指导你补上 `let` 定义或调整作用域。
-
-## 索引访问
-
-`IndexAccessError` 将错误细分为 `OUT_OF_BOUNDS`, `UNSUPPORTED_TYPE`, `UNSUPPORTED_SET_TYPE`, `NULL_TARGET`：
-
-- `OUT_OF_BOUNDS`：记录了 `index` 与集合 `size`。检查脚本是否正确使用 `length()` 或 `size()` 先行判断。
-- `UNSUPPORTED_TYPE`/`UNSUPPORTED_SET_TYPE`：异常消息显示目标类型名称。若希望在新类型上支持索引，需在 `org.tabooproject.fluxon.runtime.index` 包中实现对应 `IndexAccessor`。
-- `NULL_TARGET`：脚本对 `null` 执行 `value[0]` 导致；可通过提前判空或使用 `Coerce.asList(argument).orElse(Collections.emptyList())` 处理。
-
-**触发示例**
-
-```fluxon
-let arr = ["a", "b"]
-arr[3]
-```
-
-```text
-IndexAccessError: Index out of bounds: index=3, size=2
-	at IndexAccessor.forList(IndexAccessor.java:54)
-```
-
-若脚本尝试对 `Map` 使用 `arr[0] = "x"`，则会出现 `IndexAccessError: Cannot set index on type: java.util.HashMap`，提醒该类型不支持以数字索引写入。
+函数返回 `Function.VOID` 却继续参与运算时触发。仅在确实无需返回值的路径返回 `VOID`，其他场景返回真实结果或 `null`。
 
 ## 并发与执行器
 
-即便脚本层面没有显式多线程，Fluxon 的异步函数依赖 `ThreadPoolManager`：
-
-- 使用 `ThreadPoolManager.getInstance().getActiveTaskCount()` 观察任务堆积；若快速上涨且不下降，说明异步函数未完成或抛异常后未被 `CompletableFuture` 捕获。
-- 若发现标记为主线程的函数仍在后台跑，确认是否调用了 `registerPrimarySyncFunction`/`registerSyncExtensionFunction`，并且 `FluxonRuntime#setPrimaryThreadExecutor` 指向宿主主线程执行器。
-- 当任务量超出 `QUEUE_CAPACITY` 时 `CallerRunsPolicy` 会让调用线程直接执行任务，需通过调整宿主线程资源或拆分任务来避免 REPL/游戏主线程被阻塞。
-- 调用 `ThreadPoolManager#shutdown()` 前最好等待 `executorService.awaitTermination` 完成，否则正在执行的异步函数会被硬中断。
-
-**触发示例**
-
-```java
-runtime.registerAsyncFunction("slow", 0, ctx -> {
-	Thread.sleep(5000);
-	return null;
-});
-
-for (int i = 0; i < 2000; i++) {
-	Fluxon.eval("slow()", runtime.newEnvironment());
-}
-```
-
-```text
-Active async tasks: 1000
-CallerRunsPolicy engaged, executing slow() on caller thread
-```
-
-看到 `CallerRunsPolicy` 的日志就意味着线程池排队已满，新的异步函数会回落到触发者线程，通常需要扩容宿主线程或拆分批量任务。
+- 主线程函数：仅通过 `registerPrimarySyncFunction` / `registerSyncExtensionFunction` 标记；并使用 `FluxonRuntime#setPrimaryThreadExecutor` 指向宿主主线程。
+- 异步任务：`ThreadPoolManager#getActiveTaskCount()` 观察堆积；出现 `CallerRunsPolicy` 表示队列满，新任务会落到调用线程，需要拆批或扩容。
+- 关闭：`ThreadPoolManager#shutdown()` 前最好等待 `awaitTermination`，避免异步任务被硬中断。
 
 ## 现场信息速查
 
-排查时充分利用运行时暴露的可观察接口：
+- `Environment#getRootFunctions()/getRootExtensionFunctions()/getRootVariables()`：注册表与可见符号。
+- `FunctionContext#toString()`：函数名、target、参数实参。
+- `FluxonRuntime#getSystemFunctions()` / `#getExtensionFunctions()`：宿主侧直接查看注册状态。
+- `./gradlew :core:dumpFluxonCatalog` + `vscode-extension/scripts/sync-catalog.js`：当补全或文档与运行时不一致时优先刷新。
 
-- `Environment#getRootFunctions()`, `getRootExtensionFunctions()`, `getRootVariables()`：核对注册表与当前脚本可见符号。
-- `FunctionContext#toString()`：打印函数名、target 与参数实参，便于还原调用栈。
-- `FluxonRuntime#getSystemFunctions()` 与 `#getExtensionFunctions()`：直接在宿主程序里输出，确认 catalog 与实际注册的一致性。
-- `./gradlew :core:dumpFluxonCatalog` + `vscode-extension/scripts/sync-catalog.js`：当 VS Code 补全与运行时不一致时，优先刷新 catalog 再重跑脚本。
-
-通过以上路径，可以从“报错类型 → 现场信息 → 修复方案”快速闭环，避免在 REPL 或宿主应用里重复试错。
+按上述顺序（定位异常 → 获取现场 → 修正注册/类型/线程配置）即可快速收敛问题，减少反复试错。

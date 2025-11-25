@@ -9,11 +9,11 @@
   },
   "favicon": "/favicon.ico",
   "navigation": {
-    "tabs": [
-      {
-        "tab": "指南",
-        "groups": [
+        "tabs": [
           {
+            "tab": "指南",
+            "groups": [
+              {
             "group": "概览",
             "pages": [
               "index"
@@ -77,32 +77,42 @@
           }
         ]
       },
-      {
-        "tab": "开发者指南",
-        "groups": [
           {
-            "group": "API 入口",
+            "tab": "开发者指南",
+            "groups": [
+              {
+                "group": "API 入口",
             "pages": [
               "developer/runtime-registry",
               "developer/export-bridge"
             ]
           },
-          {
-            "group": "扩展与注解",
-            "pages": [
-              "developer/extension-api",
-              "developer/annotations"
+              {
+                "group": "扩展与注解",
+                "pages": [
+                  "developer/extension-api",
+                  "developer/annotations"
+                ]
+              },
+              {
+                "group": "集成与调试",
+                "pages": [
+                  "developer/runtime-config",
+                  "developer/troubleshooting"
+                ]
+              },
+              {
+                "group": "工程实践",
+                "pages": [
+                  "developer/best-practices",
+                  "developer/testing",
+                  "developer/documentation",
+                  "developer/contributing",
+                  "developer/release"
+                ]
+              }
             ]
           },
-          {
-            "group": "集成与调试",
-            "pages": [
-              "developer/runtime-config",
-              "developer/troubleshooting"
-            ]
-          }
-        ]
-      },
       {
         "tab": "附录",
         "groups": [

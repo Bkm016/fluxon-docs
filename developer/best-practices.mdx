@@ -5,4 +5,36 @@ description: "性能、可靠性与编码建议"
 
 # 最佳实践
 
-> 内容待补，将沉淀性能调优、可维护性与代码组织建议。
+围绕运行时注册、异步执行与调试提供的建议，帮助你在扩展 Fluxon 时保持性能与可维护性。
+
+## 注册与缓存
+
+- **先注册后建环境**：`FluxonRuntime` 会在 `registerFunction/Extension` 时打脏标记，下一次 `newEnvironment()` 自动重新烘焙缓存。避免在已创建的环境上直接改 `Environment` 内部映射。
+- **参数个数显式声明**：使用 `List<Integer>` 或 `@Optional` 表达可选参数，避免在实现里硬编码“长度判断”。
+- **命名空间一致性**：`registerFunction(namespace, ...)` 与脚本里的 `import 'ns:name'` 保持一致，重命名时记得更新函数目录与文档。
+
+## 类型与错误处理
+
+- 使用 `FunctionContext#getNumber/getString/getArgumentByType` 等助手抛出一致的 `ArgumentTypeMismatchError`；在扩展函数内先用 `hasArgument` 判空。
+- 返回值确实无意义时再返回 `Function.VOID`，否则优先返回真实结果，避免触发 `VoidError`。
+- 对外暴露的导出类优先使用 `@Export` + `ExportRegistry`，由生成的 `ClassBridge` 替代反射调用。
+
+## 并发与线程模型
+
+- 异步逻辑交给 `ThreadPoolManager`（`submitAsync` / `runAsync`），避免自行创建线程导致池外资源泄漏。
+- 需要主线程的函数使用 `registerPrimarySyncFunction` / `registerSyncExtensionFunction`，并通过 `FluxonRuntime#setPrimaryThreadExecutor` 指向宿主主线程。
+- 长耗时或 IO 操作尽量设计为异步函数，调用侧用 `await`，减少阻塞。
+
+## 环境与性能
+
+- `Environment` 已共享函数/扩展的数组缓存（见 `EnvironmentCacheTest`），频繁创建开销很小；若需要共享状态，请显式通过 `defineRootVariable` 注入。
+- 生成函数目录时使用 `./gradlew :core:dumpFluxonCatalog`，确保 VS Code 补全和文档与最新注册表一致。
+- 在性能调优前先运行 `ParserPerformanceTest` 或 `ParserJmhBenchmark`，必要时使用 `jfr/` 记录分析热点。
+
+## 调试与诊断
+
+- 控制台前缀 `$` 可以输出词法/语法树，快速定位解析问题；`Environment#getRootFunctions()`/`getRootExtensionFunctions()` 能检查注册表。
+- 当扩展函数匹配异常时，可通过 `FunctionDumper` 导出的 `fluxon-functions.json` 对照目标类型与命名空间。
+- 编译/解释差异优先用 `FluxonTestUtil.runSilent` 复现，`TestResult#isMatch()` 能直接判断差异。
+
+遵循以上模式可以让新增能力在性能、线程模型和可观测性上与现有代码保持一致。

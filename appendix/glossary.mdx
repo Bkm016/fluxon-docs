@@ -5,4 +5,31 @@ description: "Fluxon 相关的术语与符号说明"
 
 # 术语表
 
-> 内容待补，将整理 `&`、`::`、Elvis 等关键术语解释。
+常见语法符号与运行时名词的简要释义，便于在阅读源码或文档时快速对齐概念。
+
+## 语言符号
+
+- `&标识符`：引用运算符，读取已定义变量的当前值，例如 `sum = &a + &b`。`&?name` 为可选引用，未定义时返回 `null` 而非抛错。
+- `_`：在 REPL 中保存上一次执行结果的特殊变量。
+- `::`：上下文调用运算符，将函数绑定到目标对象上执行，如 `&list :: size()` 或链式 `text::uppercase()::split(" ")`。
+- `?:`（Elvis）：空合并运算符，左侧为 `null` 时返回右侧默认值，如 `&name ?: "anonymous"`。
+- `..` / `..<`：区间运算符，分别表示闭区间与左闭右开区间。
+- `async def` / `await`：定义异步函数并等待异步结果，底层依赖 `ThreadPoolManager` 与 `Function#isAsync()`。
+
+## 运行时与扩展
+
+- `namespace`：命名空间前缀，形如 `fs:time`。通过 `import 'fs:time'` 引入，避免与全局函数重名。
+- `primarySync`：标记必须在主线程执行的函数属性，注册方式为 `registerPrimarySyncFunction` 或 `registerSyncExtensionFunction`。
+- `extension function`：扩展函数，针对特定宿主类型的 `target::method()` 调用，由 `FluxonRuntime#registerExtensionFunction` 注册。
+- `FunctionContext`：执行期上下文，提供参数获取与类型校验（如 `getNumber`）并在类型不符时抛出 `ArgumentTypeMismatchError`。
+- `Environment`：解释器执行时的符号表与栈信息。由 `FluxonRuntime#newEnvironment()` 创建，内部共享烘焙过的函数/扩展数组以降低开销。
+- `bake`：`FluxonRuntime` 将注册表转换为数组缓存的过程；每次注册新函数会置脏，下一次创建环境时自动重建。
+- `GlobalObject` / `g()`：运行时默认注册的全局入口，便于在上下文调用中访问全局函数。
+
+## 工具与资产
+
+- `fluxon-functions.json`：运行时导出的函数目录，字段包括 `system`、`extensions`、`params`、`async`、`primarySync`。
+- `FunctionDumper`：目录导出工具，Gradle 任务 `:core:dumpFluxonCatalog` 的主类。
+- `FluxonConsole`：JLine 实现的交互式控制台，提供 `:vars`、`:list` 等快捷命令。
+
+如需更详细的语法描述，参阅《语言参考》各章节；运行时行为与注册 API 详见《开发者指南》。
