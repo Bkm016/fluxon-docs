@@ -16,7 +16,7 @@ Fluxon 支持整数、长整型与浮点数，并兼容科学计数法写法。
 	- 使用 `f` / `F` 后缀表示单精度。
 	- 支持科学计数法表示法。
 
-```ruby Fluxon
+```fluxon
 42
 -10
 0L
@@ -33,7 +33,7 @@ Fluxon 的字符串字面量具有如下特性：
 - 支持常见转义序列：`\n`、`\r`、`\t`、`\\`、`\"`、`\'` 等。
 - 支持 **无引号标识符文本**，即部分未加引号的标识符可以直接视作字符串字面量（见下文）。
 
-```ruby Fluxon
+```fluxon
 "hello"
 'world'
 "Line1\nLine2"
@@ -47,7 +47,7 @@ Fluxon 的词法规则允许相对宽松的标识符形式：
 - 后续字符可以包含数字、下划线以及 `-`。
 - 只要文本满足上述规则并且不是关键字（如 `if`、`async`），就可以直接作为字符串字面量使用。
 
-```ruby Fluxon highlight={2} 
+```fluxon highlight={2} 
 color = red               // 等价于 "red"
 服务器状态 = 正常           // 中文标识符同样视为字符串
 log-level = info          // 中划线可用于非首字符
@@ -66,7 +66,7 @@ Fluxon 提供以下基础值表示布尔与空值：
 - `true` / `false`：布尔常量。
 - `null`：表示空值或缺失值，常与 Elvis 运算符 `?:` 配合使用。
 
-```ruby Fluxon
+```fluxon
 isOk = true
 fallback = value ?: "default"
 ```
@@ -78,7 +78,7 @@ fallback = value ?: "default"
 - 列表在运行时会映射为 `java.util.List`。
 - 因此可以与宿主 JVM 环境共享和互操作。
 
-```ruby Fluxon
+```fluxon
 numbers = [1, 2, 3]
 nested = [[1, 2], [3, 4]]
 empty = []
@@ -91,9 +91,15 @@ empty = []
 - 键（`key`）可以是标识符或字符串字面量。
 - 值（`value`）可以是任意表达式，包括列表、映射或函数调用。
 
-```ruby Fluxon
+```fluxon
 config = [host: "localhost", port: 8080]
 headers = ["Content-Type": "application/json"]
 ```
 
 掌握上述基础字面量与类型后，你可以在变量赋值、函数参数和控制流中自由组合它们，构建更复杂、更可读的表达式；其他章节会进一步介绍如何在控制流、函数与并发中使用这些值。
+
+## 相关链接
+
+- `language/variables-and-references`
+- `language/operators-and-priority`
+- `language/control-flow`

@@ -3,41 +3,48 @@ title: "函数目录"
 description: "fluxon-functions.json 的结构、生成方式与消费方"
 ---
 
-# 函数目录
+运行时会将所有系统函数与扩展函数导出为 `fluxon-functions.json`，供 VS Code 补全、文档与其他工具共享。
 
-运行时所有系统函数与扩展函数都会被导出为 `fluxon-functions.json`，供 VS Code 补全、Mintlify 文档以及其他工具共享。该文件由 `core` 模块在构建阶段生成，本文档给出字段定义、生成命令与常见消费方。
+<Note>本页是关于函数目录结构的 canonical 参考页。其他页面如需引用字段定义，应链接到这里而不是重复粘贴。</Note>
+
+## 文件位置
+
+默认输出：`core/build/fluxon-functions.json`（由 `:core:dumpFluxonCatalog` 任务生成）。
 
 ## 结构定义
 
 目录由 `org.tabooproject.fluxon.tool.FunctionDumper` 输出，包含三个顶级字段：
 
+- `generatedAt`：生成时间戳（ISO-8601）。
+- `system`：系统函数清单（全局函数；是否需要 `import` 由条目中的 `namespace` 决定）。
+- `extensions`：扩展函数清单，按宿主类型分组（键为 `Class#getName()`），用于 `target::method()` 的补全与检索。
+
+示例（截取结构，字段含义以表格为准）：
+
 ```json
 {
-  "generatedAt": "2025-11-15T08:35:12.123Z",
+  "generatedAt": "2025-11-12T13:13:17.378940900Z",
   "system": [
-    { "name": "print", "namespace": null, "params": [1], "async": false, "primarySync": true }
+    { "name": "print", "params": [1], "async": false, "primarySync": false },
+    { "name": "base64", "namespace": "fs:crypto", "params": [0], "async": false, "primarySync": false }
   ],
   "extensions": {
     "java.io.File": [
-      { "name": "readText", "namespace": "fs:io", "params": [0], "async": false, "primarySync": true }
+      { "name": "readText", "namespace": "fs:io", "params": [0], "async": false, "primarySync": false }
     ]
   }
 }
 ```
 
-- `generatedAt`：UTC 时间戳。
-- `system`：通过 `FluxonRuntime#registerFunction` 注册的全局/命名空间函数列表。
-- `extensions`：按宿主类型分组的扩展函数，键为 `Class#getName()`。
-
-每个函数条目包含：
+### 函数条目字段
 
 | 字段 | 说明 |
 | --- | --- |
-| `name` | 函数名（去除命名空间前缀） |
-| `namespace` | 命名空间，`null` 表示无需 `import` |
-| `params` | 合法的参数个数列表，支持多版本重载 |
-| `async` | 是否异步函数（需 `await`） |
-| `primarySync` | 是否强制主线程执行 |
+| `name` | 函数名（脚本侧的调用名）。 |
+| `namespace` | 可选。若存在，脚本侧需要 `import 'namespace'` 才能解析到该函数/扩展。 |
+| `params` | 合法的参数个数列表（用于补全与语义检查，不包含参数类型）。 |
+| `async` | 是否异步函数。若为 `true`，调用通常会返回异步句柄，并需要在支持的上下文中 `await`。 |
+| `primarySync` | 是否强制在“主线程执行器”上运行（由宿主通过 `FluxonRuntime#setPrimaryThreadExecutor` 提供执行器）。 |
 
 ## 如何生成
 
@@ -45,10 +52,10 @@ description: "fluxon-functions.json 的结构、生成方式与消费方"
 
 ```bash
 ./gradlew :core:dumpFluxonCatalog
-# 输出 core/build/fluxon-functions.json
+# 输出：core/build/fluxon-functions.json
 ```
 
-如需自定义输出路径，可直接调用导出器：
+如需自定义输出路径，可直接调用导出器（需先构建 jar）：
 
 ```bash
 ./gradlew :core:jar
@@ -59,12 +66,12 @@ java -cp core/build/libs/fluxon-core-*.jar org.tabooproject.fluxon.tool.Function
 
 - 新增 / 删除 / 重命名运行时函数或扩展函数。
 - 变更参数个数、命名空间或同步/异步属性。
-- 发布 VS Code 扩展或更新 Mintlify 文档前。
+- 发布 VS Code 扩展或更新文档参考页前。
 
 ## 典型消费方
 
 - `vscode-extension/scripts/sync-catalog.js`：将目录复制到扩展数据目录，驱动补全。
-- 文档：《工具与生态 / 函数目录与补全》直接引用该结构示例。
+- 文档：用于说明内置函数与扩展函数的“可用性边界”（但字段定义仅以本页为准）。
 - 外部工具：可按字段含义解析 JSON，自行生成提示或校验。
 
 保持函数目录与源码一致，可以避免补全缺失、文档不匹配等问题。

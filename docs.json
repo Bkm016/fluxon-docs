@@ -9,29 +9,21 @@
   },
   "favicon": "/favicon.ico",
   "navigation": {
-        "tabs": [
+    "tabs": [
+      {
+        "tab": "指南",
+        "groups": [
           {
-            "tab": "指南",
-            "groups": [
-              {
             "group": "概览",
-            "pages": [
-              "index"
-            ]
+            "pages": ["index"]
           },
           {
             "group": "快速入门",
-            "pages": [
-              "guides/quickstart",
-              "guides/cli"
-            ]
+            "pages": ["guides/quickstart", "guides/cli"]
           },
           {
             "group": "工具与生态",
-            "pages": [
-              "tooling/vscode",
-              "tooling/catalog"
-            ]
+            "pages": ["tooling/vscode", "tooling/catalog"]
           }
         ]
       },
@@ -39,7 +31,7 @@
         "tab": "语言参考",
         "groups": [
           {
-            "group": "核心概念",
+            "group": "核心语法",
             "pages": [
               "language/literals-and-types",
               "language/variables-and-references",
@@ -60,74 +52,55 @@
         ]
       },
       {
-        "tab": "运行时",
+        "tab": "运行时与集成",
         "groups": [
           {
-            "group": "解释执行",
-            "pages": [
-              "runtime/environment",
-              "runtime/interpreter"
-            ]
+            "group": "执行模型",
+            "pages": ["runtime/environment", "runtime/interpreter", "runtime/execution-engine"]
           },
           {
-            "group": "编译执行",
+            "group": "集成",
+            "pages": ["runtime/jsr223"]
+          }
+        ]
+      },
+      {
+        "tab": "开发者指南",
+        "groups": [
+          {
+            "group": "API 入口",
+            "pages": ["developer/runtime-registry", "developer/export-bridge"]
+          },
+          {
+            "group": "扩展与注解",
+            "pages": ["developer/extension-api", "developer/annotations"]
+          },
+          {
+            "group": "集成与调试",
+            "pages": ["developer/runtime-config", "developer/troubleshooting"]
+          },
+          {
+            "group": "工程实践",
             "pages": [
-              "runtime/execution-engine"
+              "developer/best-practices",
+              "developer/testing",
+              "developer/documentation",
+              "developer/contributing",
+              "developer/release"
             ]
           }
         ]
       },
-          {
-            "tab": "开发者指南",
-            "groups": [
-              {
-                "group": "API 入口",
-            "pages": [
-              "developer/runtime-registry",
-              "developer/export-bridge"
-            ]
-          },
-              {
-                "group": "扩展与注解",
-                "pages": [
-                  "developer/extension-api",
-                  "developer/annotations"
-                ]
-              },
-              {
-                "group": "集成与调试",
-                "pages": [
-                  "developer/runtime-config",
-                  "developer/troubleshooting"
-                ]
-              },
-              {
-                "group": "工程实践",
-                "pages": [
-                  "developer/best-practices",
-                  "developer/testing",
-                  "developer/documentation",
-                  "developer/contributing",
-                  "developer/release"
-                ]
-              }
-            ]
-          },
       {
-        "tab": "附录",
+        "tab": "参考",
         "groups": [
           {
-            "group": "参考",
-            "pages": [
-              "appendix/cli-reference",
-              "appendix/function-catalog"
-            ]
+            "group": "命令行与资产",
+            "pages": ["appendix/cli-reference", "appendix/function-catalog"]
           },
           {
-            "group": "资源",
-            "pages": [
-              "appendix/glossary"
-            ]
+            "group": "术语",
+            "pages": ["appendix/glossary"]
           }
         ]
       }
@@ -154,7 +127,7 @@
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/mintlify"
+      "github": "https://github.com/TabooLib/fluxon"
     }
   }
 }

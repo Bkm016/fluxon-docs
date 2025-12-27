@@ -1,41 +1,65 @@
 ---
 title: "环境与作用域"
-description: "Environment 在函数、变量与扩展函数中的职责"
+description: "Environment 如何承载函数、变量与扩展"
 ---
 
-`Environment` 是 Fluxon 运行时最核心的状态容器，位于 `core/src/.../runtime/Environment.java`。它负责管理全局与局部变量、系统函数、扩展函数以及上下文目标（`target`）。理解它的布局是调试解释器行为的首要步骤。
+## 概览
 
-## 根环境与子环境
+`Environment` 是 Fluxon 执行期的“作用域 + 符号表”。解释器与编译执行引擎都会基于同一个 `Environment` 完成变量读写、函数调用与扩展函数分派（`target::method(...)`）。
 
-- 顶层环境由 `FluxonRuntime#newEnvironment()` 创建，构造函数接收：
-  - 系统函数映射 `Map<String, Function>`。
-  - 预烘焙的函数数组 `Function[]`（提升访问性能）。
-  - 系统变量（如全局对象）。
-  - 扩展函数映射及其 `KV<Class<?>, Function>[][]` 索引。
-- 每次函数调用都会通过 `new Environment(parentEnv, localSize)` 创建一个子环境，只持有局部变量数组与名称表。
-- 所有根级别的资源（函数、变量、扩展函数）都会透过 `root` 引用共享，避免重复复制。
+它管理的核心要素：
 
-## 函数分派
+- **函数**：系统函数（含命名空间函数）。
+- **扩展函数**：上下文调用 `target::method(...)`。
+- **变量**：根变量（全局）与局部变量（函数调用作用域）。
+- **上下文目标**：`target` 槽位（由 `::` 调用临时写入）。
 
-- `getFunction` 与 `getFunctionOrNull` 直接在根 `Map` 中查找，如果缺失则抛出 `FunctionNotFoundError`。
-- 扩展函数调用会先尝试索引加速：
-  - `systemExtensionFunctions` 是在 `FluxonRuntime#bake` 阶段构建的二维数组，按函数名编号。
-  - 如果索引失败，再回退到名称 -> 类型映射的 `extensionFunctions`。
-- 找到后返回 `Function` 对象，让上层 `FunctionContext` 负责执行。
+<Note>`Environment` 通常通过 `FluxonRuntime#getInstance().newEnvironment()` 创建。注册新的函数/扩展/变量后，重新创建环境以刷新运行时缓存。</Note>
 
-## 变量存储
+## Root 与子环境
 
-- 根变量保存在 `rootVariables` 中，供 `defineRootVariable` 与 `assign(..., index = -1)` 调整。
-- 子环境通过 `Object[] localVariables` 与 `String[] localVariableNames` 维护局部变量。
-- `assign` 会根据索引决定写入根变量还是局部变量，若索引越界会抛出 `VariableNotFoundError` 并附带 `localVariableNames` 调试信息。
+- **根环境（root）**：持有函数映射、扩展函数映射、根变量映射，以及运行时生成的缓存结构（用于加速调用分派）。
+- **子环境（child）**：用于函数调用作用域，只存放局部变量数组与（可选的）局部变量名；通过 `root` 引用共享根数据。
 
-## 上下文目标 (`target`)
+## 函数解析
 
-- `Environment#setTarget` / `getTarget` 用于 `value :: function()` 语法，将左操作数写入上下文目标槽。
-- 上下文执行完毕后，解释器负责恢复旧的 `target`，因此 `Environment` 本身保持无状态能力，只提供存储位。
+普通函数通过 `Environment#getFunction(name)` 在根函数表中查找；不存在会抛出 `FunctionNotFoundError`。
 
-## 导出辅助 API
+命名空间函数（如 `fs:time`）需要脚本先 `import 'fs:time'` 才会被解析到（见 `appendix/glossary`）。
 
-`Environment` 暴露若干 `@Export` 方法（如 `getRootFunctions`, `getRootExtensionFunctions`），允许脚本或外部工具在运行时枚举当前已注册的函数，方便调试 `dumpFluxonCatalog` 之外的场景。
+## 扩展函数解析（`target::method`）
 
-通过梳理 `Environment` 的字段和行为，可以确保新增函数或扩展时不会意外污染局部状态，也能更快定位“函数未定义”“变量覆盖”等问题。
+扩展函数的匹配依赖 `target` 的宿主类型：
+
+- 解析器在可优化的场景下会为调用点生成 `extensionPositionIndex`，运行时会使用 `root.dispatchTables[index]` 快速解析。
+- 对于动态注册或无法提前编号的调用点，会回退到 `root.extensionFunctions.get(name)` 的映射，并按“精确类型 → isAssignableFrom”顺序匹配。
+
+<Note>如果你在运行中动态注册了扩展函数，旧的 `Environment` 可能不会包含新的派发表缓存；建议在注册完成后重新 `newEnvironment()`。</Note>
+
+## 变量与索引
+
+变量访问在运行时以“索引”为主：
+
+- `index = -1`：根变量（保存在 `rootVariables`）。
+- `index >= 0`：局部变量（保存在 `localVariables[index]`），必要时沿 parent 链回溯。
+
+当索引越界且不存在 parent 时会抛出 `VariableNotFoundError`，并附带 `localVariableNames` 以便定位问题。
+
+## 上下文目标 `target`
+
+上下文调用会把左侧表达式写入 `Environment#target`，再执行右侧函数/扩展；执行完成后解释器会恢复旧的 `target`。
+
+## 调试与枚举
+
+- `Environment#getRootFunctions()`：当前系统函数表。
+- `Environment#getRootExtensionFunctions()`：当前扩展函数映射（类型 → Function）。
+- `Environment#getRootVariables()`：当前根变量表（含宿主注入的对象）。
+- `FunctionContext#toString()`：定位一次调用的 target 与参数。
+
+## 相关链接
+
+- `runtime/interpreter`
+- `runtime/execution-engine`
+- `developer/runtime-registry`
+- `developer/extension-api`
+- `developer/troubleshooting`

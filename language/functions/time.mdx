@@ -1,11 +1,12 @@
 ---
 title: "时间函数"
+description: "fs:time 命名空间下的 time::* 扩展与常用时间工具"
 ---
 
 当前模块负责时间相关的获取与运算功能。  
 引用前需在脚本顶部导入命名空间：
 
-```ruby Fluxon
+```fluxon
 import 'fs:time'
 ```
 
@@ -20,7 +21,7 @@ import 'fs:time'
 | `time::nowSeconds()` | `time::nowSeconds()` | 当前秒级 Unix 时间戳。 |
 | `time::nano()` | `time::nano()` | 用于测量耗时，返回 `System.nanoTime()`。 |
 
-```ruby Fluxon
+```fluxon
 current = now()
 ```
 
@@ -34,7 +35,7 @@ current = now()
 | `formatTimestamp` | `time::formatTimestamp(timestamp,pattern?)` | 将任意毫秒时间戳格式化为字符串。 |
 | `parseDateTime` | `time::parseDateTime(text,pattern)` | 解析给定格式的时间文本，返回毫秒时间戳，解析失败抛异常。 |
 
-```ruby Fluxon
+```fluxon
 formatted = time::formatTimestamp(&current, 'yyyy/MM/dd HH:mm:ss')
 ```
 
@@ -50,7 +51,7 @@ formatted = time::formatTimestamp(&current, 'yyyy/MM/dd HH:mm:ss')
 | `second` | `int` | 秒。 |
 | `weekday` | `int` | `Calendar.DAY_OF_WEEK` 值（1=周日，7=周六）。 |
 
-```ruby Fluxon
+```fluxon
 currentYear = time::year()
 ```
 
@@ -95,7 +96,7 @@ currentYear = time::year()
 
 ## 示例：生成定时窗口
 
-```ruby Fluxon
+```fluxon
 import 'fs:time'
 
 nowTs = now()
@@ -108,3 +109,8 @@ if time::isBetween(&nowTs, &windowStart, &windowEnd) {
 ```
 
 这些时间函数均基于 `Calendar`，自动采用宿主 JVM 的默认时区与地区设定。
+
+## 相关链接
+
+- `appendix/function-catalog`（函数目录，canonical）
+- `developer/export-bridge`（@Export 与命名规则）

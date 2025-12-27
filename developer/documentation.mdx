@@ -1,44 +1,76 @@
 ---
-title: "文档协作流程"
-description: "如何在多个渠道保持文档同步"
+title: "文档规范与协作"
+description: "写作规范、模板与与代码同步的最小流程"
 ---
 
-# 文档协作流程
+## 概览
 
-Fluxon 的知识源同时存在于源码、测试、Mintlify 文档以及 VS Code 扩展。下面的流程帮助你在修改功能时同步更新这些出口，避免“代码行为已变，但文档/补全仍沿用旧版本”的情况。
+Fluxon 的文档不是“另一个真相”。它的定位是：基于源码与测试的**可读解释** + 基于函数目录的**可查参考**。
 
-## 内容来源与分工
+这页给出一套最小但可执行的规范：写作结构、示例约束、术语与同步清单，保证文档不会随着版本演进快速失真。
+
+## 事实来源（Source of Truth）
 
 - **源码与测试**：始终是唯一事实来源。新增语法或函数时优先补齐测试（如 `ContextCallTest`、`EnvironmentCacheTest`）。
-- **语言参考**：`mintlify-docs/language/*` 拆分自语法说明（原 `SYNTAX` 文档），涵盖字面量、引用、上下文调用、异步等核心特性。
-- **工具与生态**：`tooling/*` 描述 VS Code 扩展与函数目录生成流程，直接依赖 `fluxon-functions.json`。
-- **开发者指南**：`developer/*` 记录运行时 API、扩展、发布与故障排查。
-- **VS Code README**：位于 `vscode-extension/README.md`，面向插件用户，需与 `tooling/vscode.mdx` 保持一致。
+- **函数与扩展清单**：以 `./gradlew :core:dumpFluxonCatalog` 生成的 `core/build/fluxon-functions.json` 为准（VS Code 补全与文档引用同源）。
+- **CLI 行为**：以 `core-console` 模块实现为准。
 
-## 修改流程（建议）
+## 页面结构模板
 
-1. **实现与测试**：完成代码与测试后，确认新增/变更的公共接口、线程模型或语法点。
-2. **更新函数目录**：运行 `./gradlew :core:dumpFluxonCatalog`，并用 `vscode-extension/scripts/sync-catalog.js` 将 JSON 同步到扩展数据目录。
-3. **同步文档**：
-   - 语法或运行时行为：更新 `language/*`、`runtime/*` 或 `developer/*` 对应页面。
-   - 工具链影响（补全、CLI）：更新 `tooling/*` 与附录。
-   - 面向使用者的快速说明：必要时补充 `guides/*`。
-4. **校对交叉引用**：检查导航 (`docs.json`) 与页面内跳转是否仍然指向正确章节，示例代码与实际 API 一致。
-5. **预览**：在 `mintlify-docs` 目录运行 `pnpm exec mint dev`（或全局 `mint dev`）查看站点；VS Code 扩展可通过 `pnpm run watch` + `F5` 预览。
+所有页面 MUST 具备 frontmatter（`title` + `description`），且正文建议从 `##` 开始，避免与站点标题产生重复 H1。
 
-## 写作与格式
+推荐模板（按需增删，但尽量保持结构可预测）：
 
-- 使用与源码一致的命名、参数个数与命名空间，避免臆测；引用 Java 类时注明包或文件路径（如 `FluxonRuntime.java`）。
-- 代码片段尽量可直接运行，涉及外部任务时给出完整命令（如 `./gradlew :core-console:run`）。
-- 当某功能依赖生成资产（函数目录、字节码 dump 等），在文档中明确“何时需要重新生成”。
-- 保持语言一致性：面向开发者的页面使用精简中文+少量英文关键字；避免与 VS Code README 冲突。
+```md
+---
+title: "页面标题"
+description: "一句话说明这页解决什么问题"
+---
 
-## 版本发布后的同步
+## 概览
+一句话定义 + 适用场景。
 
-发布前后需确认：
+## 用法
+规范描述 + 最小可运行示例。
 
-- `gradle.properties` 的 `version` 已更新并在文档中体现。
-- `fluxon-functions.json` 与 VS Code 扩展数据已刷新。
-- Mintlify 部署（或静态导出）运行无误，截图/路径未指向旧版本。
+## 语义与边界
+容易踩坑的点、常见错误形态、与其他特性的组合规则。
 
-遵循以上步骤即可让源码、补全与文档在同一节奏演进，减少用户困惑与维护成本。
+## 相关链接
+- 指向相邻章节或 canonical 参考页。
+```
+
+## 写作与格式（必须遵守）
+
+- **命名与签名不得臆测**：函数名/参数个数/命名空间必须与实现一致；引用 Java 类时标注类名并尽量给出文件路径（例如 `FluxonRuntime.java`）。
+- **示例要可复制**：能运行的尽量给出完整命令与最小代码；无法运行的示例必须说明原因。
+- **代码块语言统一**：
+  - Fluxon：` ```fluxon`
+  - Java：` ```java`
+  - Kotlin：` ```kotlin`
+  - Shell：` ```bash`（Windows 可在代码中标注 PowerShell 变体）
+- **虚构能力必须显式提示**：如果示例为了展示形态而引用了项目未内置的函数/能力，必须使用 `<Warning>` 标注，并给出“如何在宿主侧注册该函数”的真实替代入口。
+- **术语统一**：新增术语时同步维护 `appendix/glossary`，避免同一概念多种叫法。
+
+## 修改与同步流程（最小闭环）
+
+1. **实现与测试**：先让行为在测试中站得住（解析/解释/编译一致性按项目测试策略执行）。
+2. **刷新函数目录（如适用）**：
+   - 运行 `./gradlew :core:dumpFluxonCatalog` 生成 `core/build/fluxon-functions.json`。
+   - 如涉及 VS Code 扩展补全，同步目录（参考 `tooling/vscode`）。
+3. **更新文档（按影响面选择）**：
+   - 语法/语义：`language/*`
+   - 执行模型/嵌入：`runtime/*`
+   - 宿主注册/导出/扩展：`developer/*`
+   - 只影响使用路径：`guides/*`
+4. **检查 canonical 页面**：涉及“定义/字段/清单”的内容只在 canonical 页面维护（例如函数目录见 `appendix/function-catalog`），其他页面只链接引用。
+5. **本地预览**：在 `mintlify-docs` 目录运行 `pnpm exec mint dev`，确保导航可达、无 404、示例展示正常。
+
+## 发布前检查（与版本强相关）
+
+- `gradle.properties` 的 `version` 更新后：
+  - `guides/quickstart` 中的依赖坐标同步更新。
+  - `developer/release` 中的检查清单同步更新。
+- 若运行时函数/扩展变化：
+  - `appendix/function-catalog`（canonical）与相关引用页保持一致。
+  - VS Code 扩展的函数目录同步无遗漏（参考 `tooling/vscode`）。

@@ -3,7 +3,12 @@ title: "函数与异步"
 description: "函数定义、调用与异步基础"
 ---
 
-在 Fluxon 中，**函数** 用于封装可复用的计算逻辑，**异步函数** 则用于与 I/O、定时器或外部系统进行非阻塞交互。本章介绍函数的定义、调用方式，以及 `async`/`await` 相关的异步语法。
+在 Fluxon 中，**函数** 用于封装可复用的计算逻辑。运行时还提供两类“调度语义”：
+
+- `async def`：在运行时线程池执行函数体，并返回 `Future/CompletableFuture`。
+- `sync def`：在宿主提供的主线程执行器上执行函数体，并返回 `CompletableFuture`。
+
+本章介绍函数的定义、调用方式，以及 `async`/`sync`/`await` 相关语法与边界。
 
 ## 函数基础
 
@@ -11,7 +16,7 @@ description: "函数定义、调用与异步基础"
 
 Fluxon 使用 `def` 关键字定义函数，形如：
 
-```ruby Fluxon
+```fluxon
 def add(a, b) = &a + &b
 ```
 
@@ -23,7 +28,7 @@ def add(a, b) = &a + &b
 
 当函数逻辑较复杂时，可以使用大括号包裹多条语句：
 
-```ruby Fluxon
+```fluxon
 def max(a, b) = {
 	if &a >= &b then &a else &b
 }
@@ -38,7 +43,7 @@ def max(a, b) = {
 
 Lambda 是可作为值传递的匿名函数，参数写在竖线之间：
 
-```ruby Fluxon
+```fluxon
 inc = |x| &x + 1
 pairSum = |a, b| { sum = &a + &b; &sum }
 ```
@@ -53,14 +58,14 @@ pairSum = |a, b| { sum = &a + &b; &sum }
 
 - 直接传给期待函数值的内置函数/扩展，如集合操作：
 
-```ruby Fluxon
+```fluxon
 list = [1, 2, 3]
 doubled = &list :: map(|x| &x * 2)
 ```
 
 - 存储后显式调用，可用运行时提供的 `call`：
 
-```ruby Fluxon
+```fluxon
 adder = |x| &x + 1
 result = call(&adder, [5])   # => 6
 ```
@@ -71,7 +76,7 @@ Lambda 可以嵌套、返回或放入集合，常用于 `map`/`each` 等链式�
 
 定义函数后，可以像其他语言一样通过 `name(arg1, arg2)` 语法调用：
 
-```ruby Fluxon
+```fluxon
 result = add(1, 2)
 best = max(&x, &y)
 ```
@@ -87,7 +92,7 @@ best = max(&x, &y)
 
 在块体函数中，`return` 可用于提前返回：
 
-```ruby Fluxon
+```fluxon
 def abs(n) = {
 	if &n >= 0 {
 		return &n
@@ -105,9 +110,9 @@ def abs(n) = {
 
 ### 异步函数
 
-Fluxon 提供 `async def` 语法定义异步函数，用于发起非阻塞操作，例如 HTTP 调用、数据库访问或等待定时器：
+Fluxon 提供 `async def` 语法定义异步函数；调用时会返回一个异步句柄（底层通常是 `Future` 或 `CompletableFuture`）：
 
-```ruby Fluxon
+```fluxon
 async def fetchUser(id) = {
 	response = http-get("/users/" + &id)
 	return &response
@@ -116,19 +121,31 @@ async def fetchUser(id) = {
 
 <Warning>示例中的 `http-get` 作为虚构函数，仅用于说明异步调用形态。</Warning>
 
-`async def` 定义的函数在调用时会返回一个「异步句柄」（通常对应底层 `Future` 或 `CompletableFuture`），要获取异步结果，通常需要配合 `await` 语句。
-
 如果异步函数仅包含单个表达式，也可以写成简写形式：
 
-```ruby Fluxon
+```fluxon
 async def delay(ms) = sleep(&ms)
 ```
 
+### 主线程函数（sync def）
+
+如果你需要把一段逻辑固定在宿主的“主线程”执行（例如游戏/GUI 主线程），可以用 `sync def` 定义主线程函数。调用主线程函数会返回 `CompletableFuture`，通常需要配合 `await` 获取结果：
+
+```fluxon
+sync def onMainThread(x) = &x + 1
+
+result = await onMainThread(41)
+```
+
+<Note>主线程执行器由宿主通过 `FluxonRuntime#setPrimaryThreadExecutor` 提供；详见 `developer/runtime-config`。</Note>
+
 ### 等待与结果获取
 
-在支持 `await` 的上下文中，可以通过 `await` 等待异步结果完成，再继续后续计算。例如：
+`await expr` 会在 `expr` 返回 `Future/CompletableFuture` 时等待其完成，否则直接返回 `expr` 的值。它是一个“可等待也可直通”的表达式，因此可以自然嵌入控制流与函数返回。
 
-```ruby Fluxon focus={2}
+例如：
+
+```fluxon focus={2}
 async def loadAndLog(id) = {
 	user = await fetchUser(&id)
 	log("loaded user: " + &user.name)
@@ -138,11 +155,30 @@ async def loadAndLog(id) = {
 
 <Warning>示例中的 `fetchUser` 与 `log` 作为虚构函数，仅用于说明异步调用形态。</Warning>
 
+### 从宿主注册 async 函数（示例）
+
+如果你希望文档示例能落到“可运行”的最小闭环，推荐由宿主侧注册一个 `async` 函数，再在脚本侧 `await`：
+
+```java
+import org.tabooproject.fluxon.Fluxon;
+import org.tabooproject.fluxon.runtime.FluxonRuntime;
+
+public class Demo {
+    public static void main(String[] args) {
+        FluxonRuntime runtime = FluxonRuntime.getInstance();
+        runtime.registerAsyncFunction("doubleAsync", 1, ctx -> ctx.getNumber(0).intValue() * 2);
+
+        Object result = Fluxon.eval("await doubleAsync(21)");
+        System.out.println(result); // 42
+    }
+}
+```
+
 ### 异步与控制流
 
 由于 Fluxon 的控制结构本身就是表达式，因此可以自然地与异步函数组合使用：
 
-```ruby Fluxon
+```fluxon
 async def loadAll(ids) = {
 	results = []
 	for id in &ids {
@@ -155,7 +191,7 @@ async def loadAll(ids) = {
 
 可以在 `when`、`if` 或循环内部使用 `await`：
 
-```ruby Fluxon
+```fluxon
 async def loadWithFallback(id) = {
 	user = await fetchUser(&id)
 	when &user.status {
@@ -174,7 +210,7 @@ async def loadWithFallback(id) = {
 
 ### 基本语法
 
-```ruby Fluxon
+```fluxon
 target :: func(args...)
 ```
 
@@ -183,28 +219,28 @@ target :: func(args...)
 
 示例：
 
-```ruby Fluxon focus={3}
+```fluxon focus={3}
 import 'fs:time'
 
-time :: formatTimestamp(1755611940830L)
+time() :: formatTimestamp(1755611940830L)
 ```
 
-如果 `fs:time` 库提供了 `formatTimestamp` 扩展函数，它会在 `time` 这个上下文中被调用，并返回格式化后的字符串。
+如果 `fs:time` 库提供了 `formatTimestamp` 扩展函数，它会在 `time()` 这个上下文中被调用，并返回格式化后的字符串。
 
 ### 链式上下文调用
 
 `::` 可以多次连续使用，前一个上下文的结果会作为下一个上下文调用的 `target`：
 
-```ruby Fluxon focus={3}
+```fluxon focus={3}
 import 'fs:time'
 
-time :: formatTimestamp(1755611940830L) :: split("-")
+time() :: formatTimestamp(1755611940830L) :: split("-")
 ```
 
 含义近似于：
 
-```ruby Fluxon
-parts = split(formatTimestamp(time, 1755611940830L), "-")
+```fluxon
+parts = split(formatTimestamp(time(), 1755611940830L), "-")
 ```
 
 <Warning>这个例子仅用于说明链式调用的效果，不代表可以等价于这种写法</Warning>
@@ -213,14 +249,14 @@ parts = split(formatTimestamp(time, 1755611940830L), "-")
 
 - 对字符串做一系列转换：
 
-	```ruby Fluxon
+	```fluxon
 	text = 'hello world'
 	&text :: uppercase() :: split(' ')
 	```
 
 - 对集合进行多步操作：
 
-	```ruby Fluxon
+	```fluxon
 	list = [1, 2, 3]
 	&list :: size() :: toString()
 	```
@@ -229,7 +265,7 @@ parts = split(formatTimestamp(time, 1755611940830L), "-")
 
 上下文调用经常与引用操作符 `&` 一起使用，把某个变量的当前值作为上下文目标：
 
-```ruby Fluxon
+```fluxon
 list = [1, 2, 3]
 &list :: contains(1)
 ```
@@ -238,7 +274,7 @@ list = [1, 2, 3]
 
 同样地，可选引用也能与上下文调用搭配：
 
-```ruby Fluxon
+```fluxon
 (&?list ?: []) :: size()
 ```
 
@@ -248,7 +284,7 @@ list = [1, 2, 3]
 
 上下文调用本质上仍是一个普通表达式结果，因此可以和 Elvis、条件表达式等组合：
 
-```ruby Fluxon highlight={3,5}
+```fluxon highlight={3,5}
 list = [1, 2, 3]
 
 has = &list :: contains(1) ?: false
@@ -258,7 +294,7 @@ if &list :: size() > 2 then 'large' else 'small'
 
 也可以先通过 Elvis 构造安全的默认值，再做上下文调用：
 
-```ruby Fluxon
+```fluxon
 list = null
 (&list ?: [1]) :: contains(1)
 ```
@@ -267,10 +303,10 @@ list = null
 
 `::` 右侧除了可以是单个调用表达式，还可以是一个代码块 `{ ... }`。在代码块内，多条语句都会在同一个 `target` 上下文中执行：
 
-```ruby Fluxon highlight={4}
+```fluxon highlight={4}
 import 'fs:time'
 
-time :: {
+time() :: {
 	formatted = formatTimestamp(1755611940830L)
 	parts = &formatted :: split(' ')
 	&parts
@@ -284,3 +320,10 @@ time :: {
 - 块执行完毕后，原来的上下文目标会自动恢复（不会泄漏到块外）。
 
 <Note>实现上，解释器会在进入上下文调用时保存旧的 `target`，把 `target` 设为 `::` 左侧表达式的结果，执行完右侧表达式或代码块后再恢复旧值。字节码生成器也遵循同样的逻辑。</Note>
+
+## 相关链接
+
+- `appendix/glossary`
+- `appendix/function-catalog`（函数目录，canonical）
+- `developer/runtime-registry`（宿主注册函数/异步函数）
+- `developer/extension-api`（扩展函数与上下文调用）

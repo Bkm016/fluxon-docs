@@ -1,15 +1,17 @@
 ---
 title: "运行时配置与调试"
-description: "主线程执行器、线程池、函数目录等可调整点"
+description: "执行器、线程池、函数目录与环境检查点"
 ---
 
-`FluxonRuntime` 可调整线程模型与导出资产；`ThreadPoolManager` 管理异步执行。本页汇总常用开关与调试手段。
+## 概览
+
+本页汇总 Fluxon 的常用运行时可配置点与调试入口：主线程执行器、异步线程池、函数目录导出，以及在问题发生时“去哪里看”。
 
 ## 主线程执行器
 
 - 默认：`Executors.newSingleThreadExecutor()`。
-- 自定义：`FluxonRuntime#setPrimaryThreadExecutor(Executor executor)`，常用于绑定游戏/GUI 主线程。
-- 生效范围：通过 `registerPrimarySyncFunction` / `registerSyncExtensionFunction` 注册的函数。
+- 自定义：`FluxonRuntime#setPrimaryThreadExecutor(Executor executor)`，常用于绑定游戏/GUI 的主线程调度器。
+- 生效范围：被标记为主线程的函数/扩展（`registerPrimarySyncFunction` / `registerSyncExtensionFunction`，或 `@Export(sync = true)`）。
 
 ## 线程池管理器
 
@@ -21,7 +23,7 @@ description: "主线程执行器、线程池、函数目录等可调整点"
 
 - 命令：`./gradlew :core:dumpFluxonCatalog` 输出 `core/build/fluxon-functions.json`。
 - 同步：`vscode-extension/scripts/sync-catalog.js` 复制到扩展数据目录，驱动补全。
-- 字段：`generatedAt`, `system`, `extensions`, `params`, `async`, `primarySync`。新增/改名后务必重跑。
+- 字段与语义以 `appendix/function-catalog` 为准；新增/改名后务必重跑并同步。
 
 ## 环境调试
 
@@ -29,8 +31,19 @@ description: "主线程执行器、线程池、函数目录等可调整点"
 - `FunctionContext#toString()`：定位 target 与实参。
 - `FluxonRuntime#getSystemVariables()`：查看全局对象（如 `GlobalObject`）。
 
+## 关闭与生命周期
+
+- 宿主退出或插件卸载时，建议调用 `ThreadPoolManager#shutdown()` 释放线程池资源。
+- 若你创建了自定义的主线程执行器，也应按宿主的生命周期进行关闭与回收。
+
 ## 常见问题
 
 1. **新增函数未生效？** 注册后需重新 `newEnvironment()` 触发 bake。
 2. **主线程函数仍跑在后台？** 核对是否使用 `registerPrimarySyncFunction`/`registerSyncExtensionFunction`，并确认替换了主线程执行器。
 3. **异步堵塞？** `CallerRunsPolicy` 出现表示队列已满，需拆分任务或扩容宿主线程资源。
+
+## 相关链接
+
+- `runtime/interpreter`
+- `appendix/function-catalog`（函数目录，canonical）
+- `developer/troubleshooting`

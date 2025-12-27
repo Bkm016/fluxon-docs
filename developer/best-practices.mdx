@@ -3,7 +3,7 @@ title: "最佳实践"
 description: "性能、可靠性与编码建议"
 ---
 
-# 最佳实践
+## 概览
 
 围绕运行时注册、异步执行与调试提供的建议，帮助你在扩展 Fluxon 时保持性能与可维护性。
 
@@ -11,7 +11,7 @@ description: "性能、可靠性与编码建议"
 
 - **先注册后建环境**：`FluxonRuntime` 会在 `registerFunction/Extension` 时打脏标记，下一次 `newEnvironment()` 自动重新烘焙缓存。避免在已创建的环境上直接改 `Environment` 内部映射。
 - **参数个数显式声明**：使用 `List<Integer>` 或 `@Optional` 表达可选参数，避免在实现里硬编码“长度判断”。
-- **命名空间一致性**：`registerFunction(namespace, ...)` 与脚本里的 `import 'ns:name'` 保持一致，重命名时记得更新函数目录与文档。
+- **命名空间一致性**：`registerFunction(namespace, ...)` 与脚本里的 `import 'namespace'` 保持一致（如 `import 'fs:crypto'`），重命名时记得更新函数目录与文档。
 
 ## 类型与错误处理
 

@@ -48,7 +48,7 @@ runtime.registerExtension(File.class, "fs:io")
 
 | 方法 | 说明 |
 | --- | --- |
-| `registerExtensionFunction(type, name, int|List<Integer>, callable)` | 同步扩展，命名空间可为 `null`。 |
+| `registerExtensionFunction(type, name, paramCount, callable)` | 同步扩展。`paramCount` 支持 `int` 或 `List<Integer>`；命名空间可为 `null`。 |
 | `registerAsyncExtensionFunction(...)` | 异步扩展。 |
 | `registerSyncExtensionFunction(...)` | 主线程扩展。 |
 
@@ -56,10 +56,17 @@ runtime.registerExtension(File.class, "fs:io")
 
 ## 变量与全局对象
 
-- 运行时默认通过 `registerVariable("g", GlobalObject.INSTANCE)` 注册 `g()`，便于上下文调用。
+- 运行时默认注册了 `g()`，返回 `GlobalObject.INSTANCE`，便于上下文调用（如 `g() :: someExtension(...)`）。
 - 其他全局对象可通过 `Environment#getRootVariables()` 验证。
 
 ## 调试与导出
 
 - 直接打印 `runtime.getSystemFunctions()` / `getExtensionFunctions()` 查看注册结果。
 - 使用 `./gradlew :core:dumpFluxonCatalog` 导出最新函数目录，保持 VS Code 补全与文档同步。
+
+## 相关链接
+
+- `developer/extension-api`
+- `developer/export-bridge`
+- `developer/runtime-config`
+- `appendix/function-catalog`（函数目录，canonical）

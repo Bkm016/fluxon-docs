@@ -3,8 +3,6 @@ title: "CLI 参考"
 description: "Fluxon 命令行参数与示例"
 ---
 
-# CLI 参考
-
 Fluxon 提供两个主要的命令行入口：交互式控制台（`core-console`）与函数目录导出器（`FunctionDumper`）。以下列出它们的启动方式、可用命令以及常见 Gradle 任务，便于在本地快速验证或集成。
 
 ## 控制台（core-console）
@@ -39,6 +37,8 @@ Fluxon 提供两个主要的命令行入口：交互式控制台（`core-console
 | `clear` | 清屏 |
 | `Ctrl+C` | 取消当前行并清空缓存 |
 | `Ctrl+D` | 结束程序 |
+
+<Note>命令当前实现为精确匹配（区分大小写），并且需要带上前缀 `:`。</Note>
 
 ## 函数目录导出（FunctionDumper）
 

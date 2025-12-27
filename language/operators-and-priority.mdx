@@ -94,7 +94,7 @@ Fluxon 的表达式解析采用自顶向下递归下降和优先级划分。
 
 括号 `(...)` 总是可以强制改变默认优先级：
 
-```ruby Fluxon
+```fluxon
 result1 = 1 + 2 * 3      # 等价于 1 + (2 * 3) = 7
 result2 = (1 + 2) * 3    # 等于 9
 ```
@@ -103,7 +103,7 @@ result2 = (1 + 2) * 3    # 等于 9
 
 一元运算符写在操作数前面：
 
-```ruby Fluxon
+```fluxon
 flag = !&ok
 delta = -&n
 sum = &a + &b
@@ -117,14 +117,14 @@ sum = &a + &b
 
 逻辑运算符是 **左结合** 的：
 
-```ruby Fluxon
+```fluxon
 a && b && c    # 解析为 (a && b) && c
 a || b || c    # 解析为 (a || b) || c
 ```
 
 短路行为配合左结合，使得从左到右依次检查条件成为自然写法：
 
-```ruby Fluxon
+```fluxon
 ready = &configLoaded && &connectionOk && &authorized
 ```
 
@@ -132,7 +132,7 @@ ready = &configLoaded && &connectionOk && &authorized
 
 Elvis 运算符 `?:` 用于在左侧为 `null` 时返回右侧默认值：
 
-```ruby Fluxon
+```fluxon
 name = &input ?: "anonymous"
 ```
 
@@ -143,7 +143,7 @@ name = &input ?: "anonymous"
 
 如需限定参与 `?:` 的子表达式范围，可以使用括号：
 
-```ruby Fluxon
+```fluxon
 value = (&a + &b) ?: 0
 ```
 
@@ -151,7 +151,7 @@ value = (&a + &b) ?: 0
 
 赋值语句通常按从左到右依次执行更新，更推荐拆成多行，而不是写成链式形式：
 
-```ruby Fluxon
+```fluxon
 b = 1
 a = &b
 ```
@@ -162,7 +162,7 @@ a = &b
 
 上下文调用运算符 `::` 与函数调用优先级较高，它们在解析时会先于算术与逻辑运算生效：
 
-```ruby Fluxon
+```fluxon
 result = &list :: filter(fn) :: size() > 0 && &enabled
 ```
 
@@ -180,3 +180,9 @@ result = &list :: filter(fn) :: size() > 0 && &enabled
 - 对于复杂表达式，宁可 **多写括号** 来表达意图，而不是依赖读者记住所有优先级规则。
 - 在涉及 `&&` / `||` 与函数调用、上下文调用混用时，建议按 “每行一个逻辑步骤” 的方式拆分。
 - 对赋值表达式的值有依赖时，推荐显式拆出中间变量，有助于调试和日志记录。
+
+## 相关链接
+
+- `language/literals-and-types`
+- `language/variables-and-references`
+- `language/functions-and-async`

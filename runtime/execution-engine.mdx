@@ -1,36 +1,73 @@
 ---
 title: "编译执行引擎"
-description: "RuntimeScriptBase、索引访问器与导出桥在编译模式下的配合"
+description: "Fluxon.compile 的字节码生成与运行时桥接"
 ---
 
-虽然 Fluxon 默认以解释方式运行，但 `core` 模块同时提供了编译执行能力：脚本可被编译成 Java 类并直接运行，函数调用与索引访问则通过运行时提供的桥接器完成。本节概览关键组件，帮助你在编译模式下扩展或排查问题。
+## 概览
+
+Fluxon 默认以解释器运行，但也支持将脚本编译为 Java 8 字节码并直接执行。编译模式的入口是 `Fluxon.compile(...)`，产物为一组 `.class` 字节码：
+
+- 主脚本类：继承 `RuntimeScriptBase`，实现脚本主体逻辑。
+- 内部类：用于 `def`/lambda 等脚本定义（同样由字节码生成器输出）。
+
+编译后的代码不会绕开运行时：函数调用、扩展函数匹配（`target::method`）、索引访问（`obj[index]`）等依然交由运行时的 `Intrinsics`/`Environment`/注册表处理，因此语义应与解释器保持一致。
+
+## 快速上手
+
+```java
+import org.tabooproject.fluxon.Fluxon;
+import org.tabooproject.fluxon.compiler.CompileResult;
+import org.tabooproject.fluxon.interpreter.bytecode.FluxonClassLoader;
+import org.tabooproject.fluxon.runtime.Environment;
+import org.tabooproject.fluxon.runtime.FluxonRuntime;
+import org.tabooproject.fluxon.runtime.RuntimeScriptBase;
+
+FluxonRuntime runtime = FluxonRuntime.getInstance();
+Environment env = runtime.newEnvironment();
+
+CompileResult result = Fluxon.compile("1 + 2", "MyScript", env, getClass().getClassLoader());
+FluxonClassLoader loader = new FluxonClassLoader(getClass().getClassLoader());
+
+RuntimeScriptBase script = (RuntimeScriptBase) result.createInstance(loader);
+Object out = script.eval(env);
+System.out.println(out);
+```
+
+调试字节码时可用：`CompileResult#dump(File)` 输出 `.class` 文件，或用 `CompileResult#defineClass(FluxonClassLoader)` 手动控制类加载过程。
 
 ## `RuntimeScriptBase` 的角色
 
 - 每个编译后的脚本都会生成一个继承 `RuntimeScriptBase` 的类。
-- 编译器会覆写 `eval(Environment)`，直接在 Java 字节码中实现脚本逻辑。
-- `assign`、`get`、`callFunction` 这些受保护方法在编译过程中被大量内联，确保编译后的代码仍遵循与解释器一致的语义。
-- `clone()` 允许在多线程环境下复制脚本实例，从而避免共享可变状态。
+- 生成类会覆写 `eval(Environment)`，直接在字节码中实现脚本逻辑。
+- 运行时错误会通过 `RuntimeScriptBase#attachRuntimeError(...)` 补充源码摘录，便于定位行列。
+- 生成类会实现 `clone()`，用于复制脚本实例（避免共享可变状态）。
 
 ## 索引访问器 (`runtime/index`)
 
 - `IndexAccessor` 抽象了 `target[index]` 的读写行为，既可服务解释器，也可让编译器在遇到 `[]` 语法时绑定到正确的宿主类型。
 - `IndexAccessorRegistry` 利用 Java SPI 自动加载第三方实现，并允许在运行时调用 `registerAccessor` 提高优先级。
-- 编译器在生成访问指令时只需要调用注册表的 `tryGet`/`trySet`，即可对 `List`、数组、甚至自定义集合执行统一的索引操作。
+- 索引访问由 `Intrinsics` 统一派发到底层注册表，因此解释与编译模式共享同一套行为与错误类型（如 `IndexAccessError`）。
 
 ## 导出桥 (`runtime/java`)
 
-- `ExportRegistry` 和 `ClassBridge` 不只提供解释期的扩展函数，同样服务于编译后的脚本。
-- 当编译器分析到 `target::method()` 调用时，会直接定位到已经注册的桥接方法，并生成调用 `bridge.invoke` 的字节码。
-- 由于桥接器提前生成了参数类型表，编译模式下无需再次反射即可完成调用。
+- `ExportRegistry` 扫描 `@Export` 方法并注册为扩展函数；底层通过 `ClassBridge`（字节码生成）避免反射调用。
+- 编译后的脚本在调用处仍会走 `Intrinsics.callFunction(...)` → `Environment#getExtensionFunction(...)` → `Function#call(...)`，因此只要注册表一致，行为与解释器一致。
 
-## 执行器切换
+## 何时选用编译模式
 
-- `FluxonRuntime` 暴露 `setPrimaryThreadExecutor`，用于将需要主线程的函数固定在指定执行器上。编译模式同样遵循 `Function#isPrimarySync` 标记。
-- 普通编译函数如果被标记为异步 (`isAsync = true`)，则会交给《并发模型》章节介绍的线程池执行。
+- 脚本会被频繁执行，且你希望减少解释器开销。
+- 你需要把脚本“打包”为库（配合 `LibraryLoader` 等机制）。
+- 你希望拿到可审计的 `.class` 产物用于诊断（配合 `CompileResult#dump`）。
 
 ## 调优建议
 
 1. **生成调试**：在编译产物中打印 `getClass().getName()`，确认字节码是否加载到预期的 ClassLoader。
 2. **索引冲突**：如遇 `IndexAccessor` 顺序问题，记得调用 `registerAccessor` 将自定义实现插入列表开头。
-3. **导出同步**：任何新的 `@Export` 类都必须在编译前通过 `ExportRegistry#registerClass` 注册，否则编译好的脚本将找不到对应函数。
+3. **导出同步**：任何新的 `@Export` 类都必须在运行时通过 `ExportRegistry#registerClass` 注册，并在需要时重建 `Environment`，确保缓存与派发表可见。
+
+## 相关链接
+
+- `runtime/interpreter`
+- `runtime/environment`
+- `developer/export-bridge`
+- `developer/runtime-config`

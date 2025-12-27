@@ -3,29 +3,27 @@ title: "命令行与 REPL"
 description: "介绍 fluxon CLI、脚本执行与交互式体验"
 ---
 
-# 命令行与 REPL
-
-Fluxon 附带一个简单的 REPL（`core-console` 模块中的 `FluxonConsole`），方便在终端里试验语法或跑几段脚本。本章用更贴近入门者的方式介绍它：如何启动、怎样输入脚本、有什么常用命令，以及出现异常时该怎么处理。
+Fluxon 提供一个简单的交互式控制台（`core-console` 模块的 `org.tabooproject.fluxon.FluxonConsole`），适合用来试验语法、验证表达式结果与快速排错。
 
 ## 启动控制台
 
 在仓库根目录复制执行以下命令即可自动构建并启动控制台：
 
 ```bash
-# macOS / Linux（Bash）
+# macOS / Linux
 ./gradlew :core-console:installDist && ./core-console/build/install/core-console/bin/core-console
 
 # Windows PowerShell
 ./gradlew :core-console:installDist; .\core-console\build\install\core-console\bin\core-console.bat
 ```
 
-如果只是想短时间试用，也可以直接运行：
+短时间试用也可以直接运行（使用 Gradle 的 `run` 任务）：
 
 ```bash
 ./gradlew :core-console:run
 ```
 
-无论选择哪种方式，都会启动 `org.tabooproject.fluxon.FluxonConsole` 并出现 `fluxon> ` 提示符；控制台会在用户家目录创建 `.fluxon_history` 保存历史记录。
+启动后会出现 `fluxon> ` 提示符；控制台会在用户家目录创建 `.fluxon_history` 保存历史记录。
 
 ## 输入第一段脚本
 
@@ -36,16 +34,16 @@ fluxon> print("Hello Fluxon")
 Hello Fluxon
 ```
 
-- 每次执行的返回值会保存在特殊变量 `_`：
+- 如果表达式有返回值，控制台会额外打印结果，并将其保存到特殊变量 `_`（返回 `null` 时不会覆盖旧值）：
 
 ```fluxon
 fluxon> 1 + 2
-3
+> 3
 fluxon> &_ * 10
-30
+> 30
 ```
 
-- 与宿主变量交互时，仍可使用 `Fluxon.eval(script, env)` 构造好的环境，只不过在 REPL 里这些变量都存放在控制台内部的上下文中，`:vars` 命令可以查看它们。
+<Note>REPL 内部通过 JSR223 `ScriptEngine` 执行脚本，会在同一会话中复用上下文（变量会保留）。</Note>
 
 ## 常用命令
 
@@ -58,8 +56,9 @@ fluxon> &_ * 10
 | `:h`/`:help` | 查看内置命令速览。 |
 | `Ctrl+C` | 取消当前行并清空缓存，不退出程序。 |
 | `Ctrl+D` | 直接结束程序。 |
+| `clear` | 清屏。 |
 
-命令写法不区分大小写，但需要完整输入。
+命令当前实现为**精确匹配**（区分大小写），并且需要带上前缀 `:`（例如 `:vars`）。
 
 ## 查看变量
 
@@ -68,19 +67,21 @@ fluxon> &_ * 10
 ```fluxon
 fluxon> username = "fluxon"
 fluxon> :vars
-[ENGINE_SCOPE]
-    username = fluxon
-    _ = fluxon
+Current variables:
+[ENGINE_SCOPE]:
+  username         = fluxon
+  _                = fluxon
+[GLOBAL_SCOPE]:
 ```
 
 这能帮助你快速确认哪些变量已经定义，或 `_` 是否保存了想要的返回值。
 
 ## 调试模式（可选）
 
-如果在排查语法问题，可在代码前加 `$`：
+如果在排查语法/解析问题，可以在代码前加 `$`：
 
 ```fluxon
 fluxon> $if &n <= 1 then 1 else factorial(&n - 1)
 ```
 
-控制台会输出词法/语法分析结果以及伪代码树，便于定位错误。
+控制台会输出解析结构与伪代码树，便于定位括号、`then/else`、代码块边界等问题。

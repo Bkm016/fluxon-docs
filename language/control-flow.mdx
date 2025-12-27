@@ -11,7 +11,7 @@ description: "分支、循环与异常处理等控制结构"
 
 `if` 用于按条件选择不同的表达式结果：
 
-```ruby Fluxon
+```fluxon
 if &n <= 1 then 1 else &n - 1
 ```
 
@@ -22,7 +22,7 @@ if &n <= 1 then 1 else &n - 1
 - `else` 后跟条件为 `false` 时计算的表达式。
 - 整个 `if ... then ... else ...` 是一个表达式，可以直接作为函数返回值或赋值右侧：
 
-```ruby Fluxon
+```fluxon
 def fib(n) = if &n <= 1 then 1 else fib(&n - 1) + fib(&n - 2)
 ```
 
@@ -30,7 +30,7 @@ def fib(n) = if &n <= 1 then 1 else fib(&n - 1) + fib(&n - 2)
 
 当分支逻辑较复杂时，可以用代码块书写，并在 `if` 中嵌套使用：
 
-```ruby Fluxon
+```fluxon
 result = if &score >= 90 {
 	"A"
 } else if &score >= 60 {
@@ -52,7 +52,7 @@ result = if &score >= 90 {
 
 在条件模式下，`when` 按顺序测试每个条件：
 
-```ruby Fluxon
+```fluxon
 when {
 	&num % 2 == 0 -> "even"
 	&num < 0      -> "negative odd"
@@ -65,7 +65,7 @@ when {
 - `else` 分支是可选分支，用于兜底情况。
 - 如果省略 `else` 且没有任何条件命中，则结果为 `null`：
 
-```ruby Fluxon
+```fluxon
 label = when {
 	&status == "ok"    -> "OK"
 	&status == "error" -> "ERROR"
@@ -76,7 +76,7 @@ label = when {
 
 在值匹配模式下，`when` 先对一个表达式求值，然后与各个分支左侧的值做相等比较：
 
-```ruby Fluxon
+```fluxon
 when &value {
 	1    -> "one"
 	2    -> "two"
@@ -93,7 +93,7 @@ when &value {
 
 `when` 是表达式，可以绑定为变量、作为函数返回值，或嵌入到更大的表达式中：
 
-```ruby Fluxon
+```fluxon
 label = when &status {
 	"ok"      -> "OK"
 	"failed"  -> "FAILED"
@@ -120,7 +120,7 @@ Fluxon 提供 `for` 和 `while` 两种循环形式，它们都可以在循环体
 
 #### 遍历列表
 
-```ruby Fluxon highlight={3}
+```fluxon highlight={3}
 sum = 0
 
 for x in [1, 2, 3] {
@@ -133,7 +133,7 @@ for x in [1, 2, 3] {
 
 你也可以在循环中调用函数：
 
-```ruby Fluxon highlight={2}
+```fluxon highlight={2}
 async def printAll(xs) = {
 	for x in &xs {
 		print(&x)
@@ -145,7 +145,7 @@ async def printAll(xs) = {
 
 当可迭代值是键值对集合时，你可以直接解构当前项：
 
-```ruby Fluxon highlight={3}
+```fluxon highlight={3}
 pairs = []
 
 for (key, value) in &map {
@@ -160,7 +160,7 @@ for (key, value) in &map {
 
 区间由 `a..b`（闭区间）或 `a..<b`（左闭右开）创建：
 
-```ruby Fluxon highlight={3,7}
+```fluxon highlight={3,7}
 total = 0
 
 for i in 1..5 {
@@ -174,7 +174,7 @@ for j in 0..<3 {
 
 区间表达式本身是一个值，也可以先赋给变量再用于循环：
 
-```ruby Fluxon highlight={3}
+```fluxon highlight={3}
 range = 1..10
 
 for i in &range {
@@ -186,7 +186,7 @@ for i in &range {
 
 `while` 在条件为 `true` 时重复执行循环体：
 
-```ruby Fluxon highlight={4}
+```fluxon highlight={4}
 count = 0
 output = ""
 
@@ -200,7 +200,7 @@ while &count < 10 {
 - 条件结果为 `false` 或 `null` 时循环结束。
 - 条件表达式可以引用外层变量，也可以调用函数：
 
-```ruby Fluxon
+```fluxon
 def done(count) = &count >= 3
 
 c = 0
@@ -216,7 +216,7 @@ while !done(&c) {
 
 `break` 用于提前结束当前循环：
 
-```ruby Fluxon highlight={5}
+```fluxon highlight={5}
 status = "not-found"
 
 for i in 1..10 {
@@ -236,7 +236,7 @@ for i in 1..10 {
 
 `continue` 用于跳过当前迭代剩余的语句，直接进入下一轮：
 
-```ruby Fluxon highlight={5}
+```fluxon highlight={5}
 odds = []
 
 for i in 1..10 {
@@ -259,13 +259,13 @@ Fluxon 提供 `throw` 与 `try` / `catch` / `finally` 结构来处理运行时�
 
 使用 `throw(expr)` 可以在任意位置显式抛出异常：
 
-```ruby Fluxon
+```fluxon
 throw("error")
 ```
 
 在没有被 `try` 包裹时，`throw` 会中断当前脚本的执行，向外抛出一个运行时异常。`expr` 的值会作为异常的消息或原因被传递到底层运行时：
 
-```ruby Fluxon highlight={3}
+```fluxon highlight={3}
 def failIfNegative(n) = {
 	if &n < 0 {
 		throw("negative not allowed")
@@ -278,7 +278,7 @@ def failIfNegative(n) = {
 
 `try` 是一个完整的表达式，用来包裹可能出错的代码，并在出错时给出替代值：
 
-```ruby Fluxon
+```fluxon
 result = try {
 	1 / 0
 } catch (e) {
@@ -298,7 +298,7 @@ result = try {
 
 由于 `try` 是表达式，它可以出现在赋值、函数调用参数、甚至其他表达式内部：
 
-```ruby Fluxon highlight={3}
+```fluxon highlight={3}
 status = try {
 	parseConfig(&text)
 } catch (e) {
@@ -314,7 +314,7 @@ print("status = " + &status)
 
 1. **省略异常变量**：只关心出错时的兜底结果，不关心异常对象本身：
 
-	```ruby Fluxon highlight={3}
+	```fluxon highlight={3}
 	result = try {
 		throw("error")
 	} catch {
@@ -324,7 +324,7 @@ print("status = " + &status)
 
 2. **带异常变量**：需要访问异常对象的详细信息，例如类型或消息：
 
-	```ruby Fluxon highlight={3}
+	```fluxon highlight={3}
 	result = try {
 		throw("error")
 	} catch (e) {
@@ -341,7 +341,7 @@ print("status = " + &status)
 
 `finally` 用于那些不关心结果，只关心“必须执行”的逻辑，例如日志、资源释放或计时：
 
-```ruby Fluxon highlight={5}
+```fluxon highlight={5}
 value = try {
 	parseInt(&text)
 } catch (e) {
@@ -366,13 +366,13 @@ value = try {
 
 在 Fluxon 中，可以把多个异常处理片段写成一条链，形成紧凑的错误恢复逻辑：
 
-```ruby Fluxon
+```fluxon
 result = try throw("error") catch "ok" finally print("done")
 ```
 
 这与块体写法是等价的，只是把 `try`、`catch`、`finally` 部分写在一行上：
 
-```ruby Fluxon highlight={5}
+```fluxon highlight={5}
 result = try {
 	throw("error")
 } catch {
@@ -386,4 +386,11 @@ result = try {
 
 - 对于一两行的简单逻辑，简写更紧凑。
 - 涉及多步操作或需要访问异常对象时，推荐使用块体形式并显式写出 `(e)`。
+
+## 相关链接
+
+- `language/literals-and-types`
+- `language/variables-and-references`
+- `language/operators-and-priority`
+- `language/functions-and-async`
 

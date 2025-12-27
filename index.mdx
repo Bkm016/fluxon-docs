@@ -1,15 +1,23 @@
 ---
 title: "Fluxon 文档概览"
-description: "概述 Fluxon 项目的文档章节与阅读路线"
+description: "选择你的阅读路线"
 ---
 
 ![](/image/hero.png)
 
-## 阅读路线
+### 我是工程人员（在配置里使用 Fluxon）
 
-- **入门**：从《快速开始》和《命令行与 REPL》开始。
-- **工具链**：了解 VS Code 扩展、函数目录生成以及 Mintlify 文档协作方式。
-- **语言参考**：根据需要跳转到各语法章节，内容源自 `SYNTAX.md` 的拆分版。
-- **运行时/嵌入**：查看解析器、运行时、JSR-223 以及 Java 集成等页面。
-- **开发者指南**：贡献流程、测试策略、发布机制与常见故障排查。
-- **附录**：CLI 参数、函数目录、术语表等参考资料。
+- 从 [快速开始](/guides/quickstart) 跑通第一个脚本。
+- 查语法与边界：看 [语言参考](/language)（字面量、引用、运算符、控制流、函数与异步、上下文调用）。
+- 查内置函数与命名空间：先看 [函数目录](/appendix/function-catalog)，再按需读 [系统函数](/language/functions) 的讲解页。
+
+### 我是开发者（在项目里集成 Fluxon）
+
+- 从 [快速开始](/guides/quickstart) 了解 `Fluxon.eval(..., env)` 与 `Environment` 的最小用法。
+- 注册函数/扩展与导出桥：看 [运行时注册](/developer/runtime-registry)、[@Export](/developer/export-bridge)、[扩展函数](/developer/extension-api)。
+- 需要 JSR223：看 [JSR223](/runtime/jsr223)（Bindings/作用域与与 REPL 的差异）。
+
+## 快速定位
+
+- **[CLI 命令与资产生成](/appendix/cli-reference)**
+- **[术语与符号](/appendix/glossary)**

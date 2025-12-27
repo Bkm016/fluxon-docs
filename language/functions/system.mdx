@@ -1,5 +1,6 @@
 ---
 title: "系统函数"
+description: "print/sleep/call 等系统函数，以及常用 math/type 内置能力"
 ---
 
 系统函数由运行时在启动时自动注册，主要分为：
@@ -23,7 +24,7 @@ title: "系统函数"
 
 示例：
 
-```ruby Fluxon
+```fluxon
 print("Hello Fluxon")     # => 在控制台打印 Hello Fluxon\n
 error("something wrong")  # => 在错误输出打印一行信息
 ```
@@ -36,7 +37,7 @@ error("something wrong")  # => 在错误输出打印一行信息
 
 示例：
 
-```ruby Fluxon
+```fluxon
 print("before")
 sleep(1000)               # 约 1 秒
 print("after")
@@ -51,7 +52,7 @@ print("after")
 
 示例：
 
-```ruby Fluxon
+```fluxon
 # 通过名称调用已注册函数
 call("print", ["hello from call"])  # 等价于 print("hello from call")
 ```
@@ -62,7 +63,7 @@ call("print", ["hello from call"])  # 等价于 print("hello from call")
 | --- | --- | --- |
 | `throw` | `throw(error)` | 直接抛出一个错误对象或把任意值包装为运行时异常抛出。 |
 
-```ruby Fluxon
+```fluxon
 if &x < 0 {
 	throw("x must be non-negative")
 }
@@ -79,7 +80,7 @@ if &x < 0 {
 | `PI` | `double` | 圆周率常量 `Math.PI`。 |
 | `E` | `double` | 自然常数 `Math.E`。 |
 
-```ruby Fluxon
+```fluxon
 print(&PI)
 print(&E)
 ```
@@ -92,7 +93,7 @@ print(&E)
 | `max` | `max(a, b)` | 返回较大的一个参数，支持可比较类型。 |
 | `clamp` | `clamp(value, min, max)` | 将数值限制在 `[min, max]` 区间内，并尽量保持原始数值类型。 |
 
-```ruby Fluxon
+```fluxon
 min(1, 2)                 # => 1
 max(1.5, 0.5)             # => 1.5
 clamp(10, 0, 5)           # => 5
@@ -107,7 +108,7 @@ clamp(10, 0, 5)           # => 5
 | `floor` | `floor(x)` | 向下取整，如 `3.9 -> 3`。 |
 | `ceil` | `ceil(x)` | 向上取整，如 `3.1 -> 4`。 |
 
-```ruby Fluxon
+```fluxon
 abs(-3)                   # => 3
 round(3.5)                # => 4
 floor(3.9)                # => 3
@@ -127,7 +128,7 @@ ceil(3.1)                 # => 4
 | `acos` | `acos(x)` | 反余弦，要求 `x` 在 `[-1, 1]` 范围内，否则抛出异常。 |
 | `atan` | `atan(x)` | 反正切。 |
 
-```ruby Fluxon
+```fluxon
 sin(PI / 2)               # => 1.0
 cos(0)                    # => 1.0
 ```
@@ -141,7 +142,7 @@ cos(0)                    # => 1.0
 | `pow` | `pow(base, exponent)` | 幂运算；当指数与结果均为整数且有限时，尽量返回整数类型。 |
 | `sqrt` | `sqrt(x)` | 平方根，要求 `x > 0`，否则抛出异常。 |
 
-```ruby Fluxon
+```fluxon
 pow(2, 10)                # => 1024
 sqrt(9)                   # => 3.0
 ```
@@ -156,7 +157,7 @@ sqrt(9)                   # => 3.0
 | `random(end)` | 若 `end` 为整数类型，则返回 `[0, end)` 内的整数；若为浮点，则返回 `[0.0, end)`。`end` 必须为正数。 |
 | `random(start, end)` | 在 `[start, end)` 区间生成随机数；若两端均为整数，则返回区间内整数，否则返回浮点数。要求 `start < end`。 |
 
-```ruby Fluxon
+```fluxon
 random()                  # => 0.0 到 1.0 之间
 random(10)                # => 0 到 9 之间的整数
 random(5, 10)             # => 5 到 9（或 9.x）之间
@@ -170,7 +171,7 @@ random(5, 10)             # => 5 到 9（或 9.x）之间
 | `deg` | `deg(rad)` | 将弧度转换为角度。 |
 | `lerp` | `lerp(start, end, t)` | 线性插值，计算 `start + (end - start) * t`。 |
 
-```ruby Fluxon
+```fluxon
 rad(180)                  # => PI
 deg(PI)                   # => 180.0
 lerp(0, 10, 0.25)         # => 2.5
@@ -192,7 +193,7 @@ lerp(0, 10, 0.25)         # => 2.5
 | `double` | `double(value)` | `double` | 尝试将值转换为双精度浮点数。 |
 | `string` | `string(value)` | `string` | 按运行时规则转为字符串；内部使用 `context.getString(0)`。 |
 
-```ruby Fluxon
+```fluxon
 int("123")                # => 123
 double(1)                 # => 1.0
 string(&PI)               # => "3.141592653589793"（具体格式视宿主而定）
@@ -205,7 +206,7 @@ string(&PI)               # => "3.141592653589793"（具体格式视宿主而定
 | `array` | `array(collection)` | `Array` 或 `null` | 若参数是 `Collection`，则转为数组并返回；否则返回 `null`。 |
 | `typeOf` | `typeOf(value)` | `string` | 返回底层对象的简短类型名，例如 `"String"`、`"Integer"`；若为 `null`，返回字符串 `"null"`。 |
 
-```ruby Fluxon
+```fluxon
 list = [1, 2, 3]
 arr = array(&list)        # => 数组副本
 typeOf(&arr)              # => "Object[]" 或宿主实际类型名
@@ -217,3 +218,10 @@ typeOf("hello")           # => "String"（具体取决于宿主）
 ---
 
 以上仅覆盖最核心的系统 / 数学 / 类型内置函数，其他内置库（如时间、文件、环境等）在对应章节与函数目录中有更完整的说明。
+
+## 相关链接
+
+- `appendix/function-catalog`（函数目录，canonical）
+- `language/functions/crypto`
+- `language/functions/file`
+- `language/functions/time`

@@ -1,0 +1,48 @@
+---
+title: "JSR223 脚本引擎"
+description: "通过 javax.script.ScriptEngine 在 JVM 中执行 Fluxon"
+---
+
+Fluxon 提供 `core-jsr223` 模块以支持 JSR223（`javax.script`）标准接口：你可以用 `ScriptEngineManager` 获取名为 `fluxon` 的脚本引擎，并在 Java 应用中执行 Fluxon 代码。
+
+## 添加依赖
+
+```kotlin
+dependencies {
+    implementation("org.tabooproject.fluxon:fluxon-core:1.4.0")
+    implementation("org.tabooproject.fluxon:fluxon-core-jsr223:1.4.0")
+}
+```
+
+## 获取并执行
+
+```java
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+
+public class FluxonJsr223Demo {
+    public static void main(String[] args) throws Exception {
+        ScriptEngine engine = new ScriptEngineManager().getEngineByName("fluxon");
+
+        engine.put("x", 41);
+        Object result = engine.eval("&x + 1");
+
+        System.out.println(result); // 42
+    }
+}
+```
+
+## Bindings 与作用域
+
+- `engine.put(key, value)` 默认写入 `ENGINE_SCOPE`，并在执行前注入到 Fluxon 的根变量中（脚本侧通过 `&key` 读取）。
+- `GLOBAL_SCOPE` 的变量同样会在执行前注入，但当前实现只会把“脚本执行后产生的变量/函数”回写到 `ENGINE_SCOPE`。
+- 由于同一个 `ScriptEngine` 实例会复用 bindings，会话内变量会跨多次 `eval` 保留；这也是 `core-console` REPL 能持久化变量的原因。
+
+## 与宿主注册 API 的关系
+
+JSR223 引擎底层仍使用 `FluxonRuntime.getInstance().newEnvironment()` 创建环境，因此你通过 `FluxonRuntime` 注册的系统函数/扩展函数也会对 JSR223 引擎生效。宿主注册方式见：
+
+- `developer/runtime-registry`
+- `developer/extension-api`
+- `developer/export-bridge`
+

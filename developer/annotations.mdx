@@ -3,17 +3,23 @@ title: "运行时注解与可选参数"
 description: "@Optional、@Export 等注解在 runtime-core 中的作用"
 ---
 
-运行时仅暴露少量注解用于描述导出方法的语义，主要位于 `core/runtime/java` 包，供 `ExportRegistry` 读取后生成扩展函数。
+## 概览
+
+运行时仅暴露少量注解用于描述导出方法的语义，主要位于 `core/src/main/java/org/tabooproject/fluxon/runtime/java`，由 `ExportRegistry` 扫描并生成扩展函数（见 `developer/export-bridge`）。
 
 ## `@Export`
 
-- 标记 public 方法，以便被 `ExportRegistry` 扫描并注册为扩展函数。
-- 可在注册时指定 `namespace`，方法名会经过 `StringUtils.transformMethodName` 去除 `get` 前缀。
+- 标记方法可被 `ExportRegistry` 导出为扩展函数（`target::method(...)`）。
+- 支持声明线程语义：
+  - `@Export(async = true)`：注册为异步扩展（调用返回 `Future/CompletableFuture`）。
+  - `@Export(sync = true)`：注册为主线程扩展（派发到 `FluxonRuntime#setPrimaryThreadExecutor(...)`）。
+
+<Note>`@Export` 的 `async/sync` 仅影响注册时选择的函数类型；方法本身不需要返回 `Future`。</Note>
 
 ## `@Optional`
 
-- 作用于参数，表示从该参数开始均为可选。
-- `ExportRegistry` 会生成从“必选参数数”到“总参数数”的所有 `paramCount`，便于脚本短参调用。
+- 作用于参数，表示该参数及其后续参数为可选参数（建议仅用于尾部参数）。
+- `ExportRegistry` 会基于 `@Optional` 生成“支持的参数数量列表”，便于脚本短参调用。
 
 示例：
 
@@ -22,21 +28,20 @@ description: "@Optional、@Export 等注解在 runtime-core 中的作用"
 public String encode(String text, @Optional String charset) { ... }
 ```
 
-生成的 `params` = `[1, 2]`，脚本可传 1 或 2 个参数。
+生成的参数个数列表为 `[1, 2]`，脚本可传 1 或 2 个参数。
 
-## 扩展自定义语义
+## 这些注解不会做什么
 
-`ExportMethod` 预留了 `async` / `primarySync` 标志，若需扩展语义可以增加自定义注解并在扫描时设置属性，例如：
-
-```java
-@Retention(RUNTIME)
-@Target(METHOD)
-public @interface ExportAsync {}
-```
-
-扫描时将 `ExportMethod#setAsync(true)`，最终由 `registerAsyncExtensionFunction` 注册。
+- 它们不会自动把方法“注册到运行时”。你仍需要在启动时调用 `ExportRegistry#registerClass(...)`。
+- 它们不会替代类型转换：参数类型校验发生在调用期（`Intrinsics.checkArgumentTypes(...)`），必要时请在方法内部自行转换/容错。
 
 ## 与调用时的关系
 
-- 注解决定的参数个数会影响 `FunctionContext#hasArgument` 判定；缺少必需参数会在语义分析阶段报错。
-- 类型校验由扩展函数实现内部负责，建议使用 `FunctionContext#getNumber/getArgumentByType` 抛出一致的 `ArgumentTypeMismatchError`。
+- 参数个数列表会影响解析与调用：缺少必需参数会在解析/执行阶段报错。
+- 类型校验由桥接器在调用前统一执行（`Intrinsics.checkArgumentTypes(...)`），错误类型与手写扩展保持一致（如 `ArgumentTypeMismatchError`）。
+
+## 相关链接
+
+- `developer/export-bridge`
+- `developer/runtime-config`
+- `language/functions-and-async`

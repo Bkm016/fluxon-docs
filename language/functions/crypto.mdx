@@ -1,11 +1,12 @@
 ---
 title: "加解密与编码函数"
+description: "fs:crypto 命名空间下的 hash/base64/unicode/hex 工具"
 ---
 
 当前模块聚合了哈希、Base64、Unicode 与十六进制工具。  
 引用前需在脚本顶部导入命名空间：
 
-```ruby Fluxon
+```fluxon
 import 'fs:crypto'
 ```
 
@@ -31,7 +32,7 @@ import 'fs:crypto'
 | `sha512` | `hash::sha512(text)` | 512 位 SHA 指纹。 |
 示例：
 
-```ruby Fluxon
+```fluxon
 token = hash::sha256(&userId + ":" + &nonce)
 ```
 
@@ -42,7 +43,7 @@ token = hash::sha256(&userId + ":" + &nonce)
 | `encode` | `base64::encode(text,charset?)` | 将文本编码为 Base64。`charset` 留空时默认 `UTF-8`，若指定字符集不可用会自动退回 UTF-8。 |
 | `decode` | `base64::decode(data,charset?)` | 解码 Base64 文本，并以指定字符集返回字符串。输入不是合法 Base64 时会抛出运行时异常。 |
 
-```ruby Fluxon
+```fluxon
 secret = base64::encode(&json, 'UTF-8')
 original = base64::decode(&secret)
 ```
@@ -54,7 +55,7 @@ original = base64::decode(&secret)
 | `encode` | `unicode::encode(text)` | 把所有非 ASCII 字符写成 `\uXXXX` 形式，ASCII 字符保持原样。 |
 | `decode` | `unicode::decode(text)` | 将合法的 `\uXXXX` 片段替换为真实字符，遇到无效片段时保持原文。 |
 
-```ruby Fluxon
+```fluxon
 escaped = unicode::encode('你好 Fluxon')
 restored = unicode::decode(&escaped)
 ```
@@ -66,7 +67,12 @@ restored = unicode::decode(&escaped)
 | `encode` | `hex::encode(text)` | 使用 UTF-8 获取字节并输出小写十六进制。 |
 | `decode` | `hex::decode(hexString)` | 将十六进制文本还原为 UTF-8 字符串；字符串长度必须为偶数，且仅允许 0-9 / A-F。 |
 
-```ruby Fluxon
+```fluxon
 payload = hex::encode('OK')       # => 4f4b
 hex::decode(&payload)             # => OK
 ```
+
+## 相关链接
+
+- `appendix/function-catalog`（函数目录，canonical）
+- `language/functions/system`

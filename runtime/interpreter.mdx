@@ -1,43 +1,59 @@
 ---
 title: "解释器执行流"
-description: ""
+description: "解释器如何评估 AST 并派发函数调用"
 ---
 
-Fluxon 的解释器建立在 `Function` 接口与 `FunctionContext` 之上。`core/runtime` 中的相关类定义了函数调用的全部语义：目标对象、参数、环境以及异步属性。本文结合源码梳理解释执行路径。
+Fluxon 的解释器建立在 `Function` / `FunctionContext` / `Environment` 三个核心抽象之上：解析器产出 AST，解释器按节点类型派发 evaluator，并在函数调用处交由运行时标准库（`Intrinsics`）处理 `async` / `primarySync` 等语义。
 
-## 函数抽象：`Function` 与 `NativeFunction`
+## 执行入口
 
-- `Function` 是一个极简接口，定义名称、命名空间、参数个数、异步标记、主线程标记以及 `call(FunctionContext)` 方法。
-- `NativeFunction` 实现了 `Function` 与 `Symbolic`，构造时绑定 `SymbolFunction` 与 `NativeCallable`。
-- 异步/主线程标记直接来源于注册 API：
-  - `registerAsyncFunction` -> `isAsync = true`。
-  - `registerPrimarySyncFunction` -> `isPrimarySync = true`，解释器可据此切换到 `FluxonRuntime#getPrimaryThreadExecutor`。
+典型路径：
+
+- `Fluxon.eval(source)` → 解析 → `Interpreter.execute(parseResults)`
+- `Interpreter` 在执行过程中会维护 `Environment`（变量、函数、扩展函数与上下文目标 `target`）。
+
+<Note>编译执行（字节码生成与 `RuntimeScriptBase`）见 `runtime/execution-engine`。</Note>
+
+## 函数抽象：`Function`
+
+- `Function` 定义函数名、命名空间、参数个数、`async`/`primarySync` 标记，以及 `call(FunctionContext)`。
+- 系统/扩展函数通常以 `NativeFunction` 承载；脚本 `def/async def/sync def` 生成的函数也实现 `Function`，因此共享同一套调用语义。
 
 ## 调用上下文：`FunctionContext`
 
-- 每次调用都会创建 `FunctionContext`，其中包含：
-  - 当前 `Function`。
-  - `target`（上下文调用时的宿主对象）。
-  - 参数数组与参数数量。
-  - 共享的 `Environment`。
-- 提供丰富的便捷方法：`getNumber`, `getBoolean`, `getString`, `getFunction` 等，会自动做类型检查并在失败时抛出 `ArgumentTypeMismatchError`。
-- `updateArguments` 允许重用同一 `FunctionContext`，以降低高频调用的分配成本。
+`FunctionContext` 封装一次调用所需的信息：
 
-## 脚本基类：`RuntimeScriptBase`
+- `function`：当前函数
+- `target`：上下文调用（`::`）时的目标对象
+- `environment`：共享环境
+- `arguments`：参数与参数数量（解释器会对高频路径做池化与优化，但对文档使用者而言语义不变）
 
-- 编译器在编译脚本时会生成继承 `RuntimeScriptBase` 的 Java 类。
-- 核心 API：
-  - `eval(Environment env)`：解释器入口，通常由生成的类覆写。
-  - `assign` / `get`：与 `Environment` 打通，用于读写局部或根变量。
-  - `callFunction`：调用另一个函数时的辅助方法，内部会创建新的 `FunctionContext`。
-- 由于脚本类持有 `Environment` 引用，因此可以在解释执行与编译执行之间复用同一套状态。
+常用的参数读取 API：`getArgument` / `getNumber` / `getString` / `getFunction` 等；类型不匹配时会抛出 `ArgumentTypeMismatchError`。
+
+## async 与 primarySync
+
+函数调用的调度逻辑由 `Intrinsics.callResolvedFunction(...)` 统一处理：
+
+- `async = true`：调用会被提交到运行时线程池，返回 `Future/CompletableFuture`。
+- `primarySync = true`：调用会被转发到主线程执行器（由宿主通过 `FluxonRuntime#setPrimaryThreadExecutor` 提供）。
+- 其他情况：同步执行并直接返回结果。
+
+`await expr` 会在 `expr` 返回 `Future/CompletableFuture` 时等待其完成，否则直接返回 `expr` 的值。
 
 ## 全局对象与上下文调用
 
-- 运行时在初始化时注册了一个 `g` 函数，返回 `GlobalObject.INSTANCE`。当脚本内部需要访问全局命名空间或调用 `g::someExtension()` 时，这个对象提供了固定的锚点。
-- `Environment#setTarget` 与 `FunctionContext#getTarget` 一起实现 `value :: func()` 语法，使得扩展函数可以天然融入解释器。
+- `Environment` 维护一个 `target` 槽位以实现上下文调用：`value :: func(...)` 会临时将 `target` 设为 `value`，并在执行结束后恢复旧值。
+- 扩展函数的解析与匹配依赖 `target` 的宿主类型（参见 `developer/extension-api`）。
 
 ## 调试建议
 
 - 当遇到“函数找不到”或“参数类型错误”时，可以直接打印 `FunctionContext#toString()`，其中包含函数名、目标对象与参数信息。
-- 需要追踪异步调用是否落在正确线程，可检查 `Function#isAsync` 与 `Function#isPrimarySync`，并在调度器（见《编译执行》章节）中观察线程名称。
+- 需要追踪异步/主线程调度时，可结合 `Function#isAsync` / `Function#isPrimarySync` 与 `ThreadPoolManager` 的观测信息排查（参见 `developer/runtime-config` 与 `developer/troubleshooting`）。
+
+## 相关链接
+
+- `runtime/environment`
+- `runtime/execution-engine`
+- `developer/runtime-registry`
+- `developer/runtime-config`
+- `developer/troubleshooting`

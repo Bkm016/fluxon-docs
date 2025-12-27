@@ -25,7 +25,7 @@ runtime.registerExtension(File.class, "fs:io")
 
 | 方法 | 说明 |
 | --- | --- |
-| `registerExtensionFunction(type, name, int|List<Integer>, callable)` | 同步扩展，命名空间可为 `null`。 |
+| `registerExtensionFunction(type, name, paramCount, callable)` | 同步扩展。`paramCount` 支持 `int` 或 `List<Integer>`；命名空间可为 `null`。 |
 | `registerExtensionFunction(type, namespace, name, List<Integer>, callable)` | 指定命名空间，需脚本侧 `import`。 |
 | `registerAsyncExtensionFunction(...)` | 异步扩展。 |
 | `registerSyncExtensionFunction(...)` | 主线程扩展。 |
@@ -44,3 +44,10 @@ runtime.registerExtension(File.class, "fs:io")
 - 复杂类型示例可参考 `core/runtime/function/extension` 包（`Path`, `Collection` 等）。
 - 想支持索引访问 (`obj[index]`)，需实现 `IndexAccessor`（详见运行时章节）。
 - 调试：`Environment#getRootExtensionFunctions()` 查看当前映射；若调用失败，检查是否遗漏 `import` 或命名空间不一致。`dumpFluxonCatalog` 可确认导出签名。
+
+## 相关链接
+
+- `developer/runtime-registry`
+- `developer/export-bridge`
+- `runtime/environment`
+- `runtime/interpreter`

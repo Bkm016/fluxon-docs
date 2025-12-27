@@ -3,48 +3,38 @@ title: "函数目录与补全"
 description: "fluxon-functions.json 的生成流程与消费方式"
 ---
 
-Fluxon 通过一份统一的 `fluxon-functions.json` 目录把运行时函数暴露给 IDE、脚本引擎与文档工具。目录由 `core` 模块在构建阶段导出，包含系统函数与扩展函数的元数据（命名空间、参数数量、是否异步等），之后由 VS Code 扩展、Mintlify 文档及其他自动化工具一同消费。
+Fluxon 通过一份统一的 `fluxon-functions.json` 目录把运行时函数暴露给 IDE（补全）、文档与其他工具。它由 `core` 模块导出，包含系统函数与扩展函数的元数据（命名空间、参数个数、是否异步/主线程等）。
 
-## 目录包含什么
+<Note>关于该 JSON 的字段定义与结构，请以 `appendix/function-catalog` 为准（canonical）。本页仅描述“如何生成与同步”。</Note>
 
-目录文件遵循 `FunctionDumper` 的结构：
+## 生成目录
 
-```json
-{
-	"generatedAt": "2025-11-15T08:35:12.123Z",
-	"system": [
-		{ "name": "print", "namespace": null, "params": [1], "async": false, "primarySync": true },
-		{ "name": "sleep", "namespace": null, "params": [1], "async": false, "primarySync": false }
-	],
-	"extensions": {
-		"java.io.File": [
-			{ "name": "readText", "namespace": "fs:io", "params": [0], "async": false, "primarySync": true }
-		]
-	}
-}
-```
-
-- `system`：直接以 `runtime.registerFunction` 注册的全局/命名空间函数。
-- `extensions`：按宿主类型分组的扩展函数，供 IDE 在 `object::` 上下文提示。
-- `params`：同名函数若支持多种参数个数，会列出所有合法值。
-- `async`/`primarySync`：来自 Java 端 `Function` 定义，用于 IDE 区分 `await` 需求或只允许在主线程调用的 API。
-
-## 如何生成
-
-`core/build.gradle.kts` 暴露了 `dumpFluxonCatalog` 任务，实质上调用 `org.tabooproject.fluxon.tool.FunctionDumper`：
+`core` 模块提供 `dumpFluxonCatalog` 任务（调用 `org.tabooproject.fluxon.tool.FunctionDumper`）：
 
 ```bash
 ./gradlew :core:dumpFluxonCatalog
 ```
 
-输出路径：`core/build/fluxon-functions.json`（可通过任务参数覆盖）。任务会：
+默认输出：`core/build/fluxon-functions.json`
 
-1. 启动最小化的 `FluxonRuntime`。
-2. 遍历注册在运行时的系统函数与扩展函数。
-3. 将结果排序（按函数名、宿主类）后写入 JSON。
+建议在以下场景重新执行：
 
-建议在以下场景重新执行该命令：
+- 新增/删除/重命名运行时函数或扩展函数。
+- 修改参数个数、命名空间、`async`/`primarySync` 属性。
+- 发布 VS Code 扩展或更新文档参考页前。
 
-- 新增/删除运行时函数或扩展函数。
-- 修改函数签名（参数个数、命名空间、异步属性）。
-- 准备发布 VS Code 扩展或同步 Mintlify 文档前。
+## 同步到消费方
+
+- **VS Code 扩展**：在导出后运行扩展内的同步脚本（详见 `tooling/vscode`）。
+- **文档**：若目录结构有变化，仅更新 `appendix/function-catalog`；若只是函数新增/变更，则更新对应讲解页，并确保示例与导出的目录一致。
+
+## 什么时候必须同步
+
+- 新增/删除/重命名运行时函数或扩展函数。
+- 修改参数个数、命名空间、`async`/`primarySync` 属性。
+- 发布 VS Code 扩展或更新文档前。
+
+## 相关链接
+
+- `appendix/function-catalog`（字段定义与结构，canonical）
+- `tooling/vscode`

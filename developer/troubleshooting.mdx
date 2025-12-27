@@ -3,7 +3,11 @@ title: "故障排查"
 description: "常见问题、错误信息与排查路径"
 ---
 
-按“解析 → 分派 → 数据 → 并发”分层排查，直接对号入座后执行对应清单。
+## 概览
+
+建议按“解析 → 分派 → 数据 → 并发”分层排查：先用错误类型快速定位，再补齐现场信息（target/参数/变量/线程）以缩小范围。
+
+## 快速定位
 
 | 阶段 | 典型症状 | 立即检查 |
 | --- | --- | --- |
@@ -68,3 +72,11 @@ description: "常见问题、错误信息与排查路径"
 - `./gradlew :core:dumpFluxonCatalog` + `vscode-extension/scripts/sync-catalog.js`：当补全或文档与运行时不一致时优先刷新。
 
 按上述顺序（定位异常 → 获取现场 → 修正注册/类型/线程配置）即可快速收敛问题，减少反复试错。
+
+## 相关链接
+
+- `guides/cli`
+- `runtime/interpreter`
+- `runtime/environment`
+- `developer/runtime-config`
+- `appendix/glossary`

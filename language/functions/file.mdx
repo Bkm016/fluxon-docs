@@ -1,11 +1,12 @@
 ---
 title: "文件与路径函数"
+description: "fs:io 命名空间下的 file/path 构造与 File/Path 扩展函数"
 ---
 
 当前模块负责 `java.io.File` 与 `java.nio.file.Path` 的创建及扩展方法。  
 引用前需在脚本顶部导入命名空间：
 
-```ruby Fluxon
+```fluxon
 import 'fs:io'
 ```
 
@@ -18,7 +19,7 @@ import 'fs:io'
 | `file` | `file(path)` | 创建 `File` 对象。 |
 | `file` | `file(parent,child)` | 创建 `File` 对象。`parent` 可以是 `File` 或任意可转字符串的对象。 |
 
-```ruby Fluxon
+```fluxon
 logPath = path('logs/app.log')
 logFile = file('logs/app.log')
 ```
@@ -117,7 +118,7 @@ logFile = file('logs/app.log')
 
 ## 实用示例
 
-```ruby Fluxon
+```fluxon
 import 'fs:io'
 
 projectDir = path('..', 'fluxon')
@@ -133,3 +134,8 @@ archive = file(&logs, 'latest.bak')
 ```
 
 通过这些扩展，可以在脚本中完成大部分文件系统任务，而无需直接调用宿主语言 API。
+
+## 相关链接
+
+- `appendix/function-catalog`（函数目录，canonical）
+- `developer/extension-api`
