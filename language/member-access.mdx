@@ -1,0 +1,109 @@
+---
+title: "成员访问"
+description: "通过反射读取对象属性/字段并调用方法"
+---
+
+成员访问运算符 `.` 用于在对象上读取属性（字段/Getter）或调用方法，例如 `obj.name`、`obj.size()`。
+
+<Warning>
+`.` 基于 Java 反射实现，默认在嵌入式场景中关闭；如果你在宿主侧执行脚本，需要显式开启反射访问（见下文）。
+</Warning>
+
+## 基本语法
+
+### 读取属性（字段 / Getter）
+
+```fluxon
+value = &obj.name
+```
+
+属性解析遵循“尽量像属性一样读”的规则：
+
+1. 先尝试读取 public 字段 `name`
+2. 再尝试调用无参方法 `getName()`
+3. 再尝试调用无参方法 `name()`
+4. 再尝试调用无参方法 `isName()`（常见于布尔属性）
+
+因此，像 `&e.message` 会优先解析为 `getMessage()`（如果存在）。
+
+### 调用方法
+
+```fluxon
+length = &text.length()
+size = &list.size()
+```
+
+支持重载解析；当存在多个同名方法时，会按参数类型选择最匹配的签名。
+
+### 链式访问
+
+```fluxon
+label = &user.profile.getName()
+```
+
+## 启用与关闭（反射访问开关）
+
+### 宿主集成（Java）
+
+成员访问 `.` 受 `CompilationContext#allowReflectionAccess` 控制。默认值由 `FluxonFeatures.DEFAULT_ALLOW_REFLECTION_ACCESS`
+决定（默认 `false`）。
+
+如果你在宿主侧解析/编译脚本，需要显式开启：
+
+```java
+import org.tabooproject.fluxon.Fluxon;
+import org.tabooproject.fluxon.compiler.CompilationContext;
+import org.tabooproject.fluxon.runtime.Environment;
+import org.tabooproject.fluxon.runtime.FluxonRuntime;
+
+Environment env = FluxonRuntime.getInstance().newEnvironment();
+CompilationContext ctx = new CompilationContext("text = \"hi\"; &text.length()");
+ctx.setAllowReflectionAccess(true);
+
+Object result = Fluxon.eval(Fluxon.parse(env, ctx), env);
+```
+
+如果你希望全局默认启用（不推荐对不可信脚本使用），可以在解析前设置：
+
+```java
+import org.tabooproject.fluxon.compiler.FluxonFeatures;
+
+FluxonFeatures.DEFAULT_ALLOW_REFLECTION_ACCESS = true;
+```
+
+### CLI / REPL
+
+Fluxon 的交互式控制台通常会默认开启反射访问，因此在 REPL 中使用 `.` 往往不需要额外配置。
+
+## 与上下文调用 `::` 的区别
+
+- `obj :: func(...)`：调用 Fluxon 的扩展函数（由运行时注册），不依赖 Java 反射，适合稳定的“语言级能力”。
+- `obj.member` / `obj.member(...)`：直接访问宿主对象的成员（反射），更像“桥接能力”，会受宿主类型、可见性与安全策略影响。
+
+同一需求通常两种写法都可能存在：
+
+```fluxon
+list = [1, 2, 3]
+
+&list :: size()     # 扩展函数
+&list.size()        # 反射调用 List#size()
+```
+
+## 常见错误与边界
+
+- 反射访问未开启：解析阶段会报错并提示开启 `allowReflectionAccess`。
+- 目标为 `null`：会抛出 `NullPointerException`（例如 `Cannot access member 'x' on null object`），可用 `if` / `?:` 做保护：
+
+```fluxon
+name = if &user != null then &user.name else "anonymous"
+```
+
+- 成员不存在：会抛出 `MemberNotFoundError`。
+- 访问失败：可能抛出 `MemberAccessError` 或被包装为运行时异常（例如方法内部抛出的异常）。
+
+## 相关链接
+
+- [运算符与优先级](/language/operators-and-priority)
+- [函数与异步（上下文调用 ::）](/language/functions-and-async)
+- [扩展函数 API](/developer/extension-api)
+- [术语表](/appendix/glossary)
