@@ -3,7 +3,8 @@ title: "控制流"
 description: "分支、循环与异常处理等控制结构"
 ---
 
-在 Fluxon 中，控制结构本身也是表达式。大多数分支与循环形式都能够产生值，并参与更大表达式的求值。本章介绍 `if`、`when`、循环、`break` / `continue` 以及 `try` 相关语法。
+Fluxon 的控制结构也是表达式：分支与循环可以产生值，并参与更大表达式的求值。本章覆盖 `if`、`when`、循环、`break/continue` 与
+`try`。
 
 ## 条件分支
 
@@ -253,7 +254,9 @@ for i in 1..10 {
 
 ## 异常处理
 
-Fluxon 提供 `throw` 与 `try` / `catch` / `finally` 结构来处理运行时错误。和其他控制结构一样，`try` 是一个表达式，可以产生值。
+Fluxon 提供 `throw` 与 `try` / `catch` / `finally` 结构来处理运行时错误。
+
+和其他控制结构一样，`try` 是一个表达式，可以产生值。
 
 ### 抛出异常
 
@@ -263,7 +266,9 @@ Fluxon 提供 `throw` 与 `try` / `catch` / `finally` 结构来处理运行时�
 throw("error")
 ```
 
-在没有被 `try` 包裹时，`throw` 会中断当前脚本的执行，向外抛出一个运行时异常。`expr` 的值会作为异常的消息或原因被传递到底层运行时：
+在没有被 `try` 包裹时，`throw` 会中断当前脚本的执行，向外抛出一个运行时异常。
+
+`expr` 的值会作为异常的消息或原因被传递到底层运行时：
 
 ```fluxon highlight={3}
 def failIfNegative(n) = {
@@ -285,6 +290,8 @@ result = try {
 	"failed: " + &e.message
 }
 ```
+
+<Note>示例中的 `&e.message` 使用成员访问 `.`（反射）。嵌入式集成默认关闭反射访问，如需使用请参阅 [成员访问（.）](/language/member-access)。</Note>
 
 求值规则概括如下：
 
@@ -360,7 +367,9 @@ value = try {
 	- 正常情况下：`try` 块的结果。
 	- 出错且被捕获的情况下：`catch` 块的结果。
 
-只有在 `finally` 内部再次抛出异常时，才会覆盖原本的结果，改为向外抛出新的异常。否则，`finally` 不会改变 `try` / `catch` 已经决定好的值。
+只有在 `finally` 内部再次抛出异常时，才会覆盖原本的结果，改为向外抛出新的异常。
+
+否则，`finally` 不会改变 `try` / `catch` 已经决定好的值。
 
 ### 链式用法与简写形式
 
@@ -389,8 +398,8 @@ result = try {
 
 ## 相关链接
 
-- `language/literals-and-types`
-- `language/variables-and-references`
-- `language/operators-and-priority`
-- `language/functions-and-async`
-
+- [字面量与类型](/language/literals-and-types)
+- [变量与引用](/language/variables-and-references)
+- [运算符与优先级](/language/operators-and-priority)
+- [成员访问（.）](/language/member-access)
+- [函数与异步](/language/functions-and-async)

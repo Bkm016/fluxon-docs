@@ -5,12 +5,15 @@ description: "单元测试、性能测试与 JFR 使用"
 
 ## 概览
 
-Fluxon 的测试集中在 `core/src/test/java`，覆盖解析、解释/编译一致性、运行时缓存与扩展调用。下面列出主要分组、运行方式与补充建议。
+Fluxon 的测试集中在 `core/src/test/java`，覆盖解析、解释/编译一致性、运行时缓存与扩展调用。
+
+下面列出主要分组、运行方式与补充建议。
 
 ## 测试分组与入口
 
 - **解析器**：`parser/*`（如 `EnhancedParserTest`, `ErrorRecoveryTest`, `ParserTest`）验证词法/语法与错误恢复能力。
-- **解释器与字节码**：`interpreter/*` 与 `interpreter/bytecode/*` 对比解释执行与编译执行结果（使用 `FluxonTestUtil.runSilent`），涵盖上下文调用、索引、异步、异常等。
+- **解释器与字节码**：`interpreter/*` 与 `interpreter/bytecode/*` 对比解释执行与编译执行结果。
+  使用 `FluxonTestUtil.runSilent`，涵盖上下文调用、索引、异步、异常等。
 - **运行时**：`runtime/EnvironmentCacheTest` 检查函数/扩展缓存烘焙与脏标记策略。
 - **JSR-223**：`core-jsr223/src/test/java` 下的 `FluxonScriptEngineTest` 覆盖脚本引擎行为。
 - **基准测试**：`benchmark/*` 提供 JUnit 版性能测试与 JMH 基准。

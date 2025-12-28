@@ -3,13 +3,14 @@ title: "快速开始"
 description: "在 JVM 中跑通第一个 Fluxon 脚本"
 ---
 
-Fluxon 的标准入口是 `org.tabooproject.fluxon.Fluxon`。你可以在 JVM 应用中直接执行表达式或脚本，并在需要时将脚本编译为可复用的字节码。
+Fluxon 的标准入口是 `org.tabooproject.fluxon.Fluxon`。你可以在 JVM 应用中直接执行表达式或脚本。需要时，
+也可以将脚本编译为可复用的字节码。
 
 ## 前提
 
 - **JDK**：8 或以上版本。
 - **构建工具**：Gradle 或 Maven。
-- **发布仓库**：`https://repo.tabooproject.org/repository/releases/`
+- **发布仓库**：[releases](https://repo.tabooproject.org/repository/releases/)
 
 ## 添加依赖（Gradle Kotlin DSL）
 
@@ -66,6 +67,6 @@ public class FluxonHello {
 
 ## 接下来
 
-- 交互式调试：`guides/cli`
-- 语法与边界：从 `language/literals-and-types` 开始
-- 注册函数/扩展：`developer/runtime-registry`、`developer/extension-api`
+- 交互式调试：看 [命令行与 REPL](/guides/cli)
+- 语法与边界：从 [字面量与类型](/language/literals-and-types) 开始
+- 注册函数/扩展：看 [运行时注册 API](/developer/runtime-registry)、[扩展函数 API](/developer/extension-api)

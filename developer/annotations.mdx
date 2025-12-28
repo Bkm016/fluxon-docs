@@ -5,7 +5,12 @@ description: "@Optional、@Export 等注解在 runtime-core 中的作用"
 
 ## 概览
 
-运行时仅暴露少量注解用于描述导出方法的语义，主要位于 `core/src/main/java/org/tabooproject/fluxon/runtime/java`，由 `ExportRegistry` 扫描并生成扩展函数（见 `developer/export-bridge`）。
+运行时仅暴露少量注解用于描述导出方法的语义，供导出桥接与可选参数使用。
+
+这些注解主要位于
+[`core/src/main/java/org/tabooproject/fluxon/runtime/java`](https://github.com/TabooLib/fluxon/tree/master/core/src/main/java/org/tabooproject/fluxon/runtime/java)。
+
+它们会被 `ExportRegistry` 扫描并生成扩展函数（见 [@Export 与桥接](/developer/export-bridge)）。
 
 ## `@Export`
 
@@ -38,10 +43,11 @@ public String encode(String text, @Optional String charset) { ... }
 ## 与调用时的关系
 
 - 参数个数列表会影响解析与调用：缺少必需参数会在解析/执行阶段报错。
-- 类型校验由桥接器在调用前统一执行（`Intrinsics.checkArgumentTypes(...)`），错误类型与手写扩展保持一致（如 `ArgumentTypeMismatchError`）。
+- 类型校验由桥接器在调用前统一执行（`Intrinsics.checkArgumentTypes(...)`）。
+  错误类型与手写扩展保持一致（如 `ArgumentTypeMismatchError`）。
 
 ## 相关链接
 
-- `developer/export-bridge`
-- `developer/runtime-config`
-- `language/functions-and-async`
+- [@Export 与桥接](/developer/export-bridge)
+- [运行时配置与调试](/developer/runtime-config)
+- [函数与异步](/language/functions-and-async)

@@ -3,7 +3,11 @@ title: "CLI 参考"
 description: "Fluxon 命令行参数与示例"
 ---
 
-Fluxon 提供两个主要的命令行入口：交互式控制台（`core-console`）与函数目录导出器（`FunctionDumper`）。以下列出它们的启动方式、可用命令以及常见 Gradle 任务，便于在本地快速验证或集成。
+Fluxon 提供两个主要的命令行入口：交互式控制台（`core-console`）与函数目录导出器（`FunctionDumper`）。
+
+本页列出它们的启动方式、可用命令以及常见 Gradle 任务，便于在本地快速验证或集成。
+
+<Note>交互式使用与调试技巧见 [命令行与 REPL](/guides/cli)。</Note>
 
 ## 控制台（core-console）
 
@@ -23,7 +27,9 @@ Fluxon 提供两个主要的命令行入口：交互式控制台（`core-console
 ./gradlew :core-console:run
 ```
 
-控制台不接受额外启动参数，会自动在用户主目录创建 `.fluxon_history` 记录历史。调试时可以在语句前加 `$`，输出词法/语法树和伪代码。
+控制台不接受额外启动参数，会自动在用户主目录创建 `.fluxon_history` 记录历史。
+
+调试时可以在语句前加 `$`，输出词法/语法树和伪代码。
 
 ### 内置命令
 

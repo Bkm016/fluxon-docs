@@ -3,7 +3,9 @@ title: "扩展函数 API"
 description: "ExtensionBuilder 与环境中的扩展检索流程"
 ---
 
-扩展函数把 `target::method()` 映射到 Java 侧实现，用于为特定宿主类型增加上下文能力（文件、集合、游戏对象等）。核心代码分布在 `FluxonRuntime`, `ExtensionBuilder`, `Environment`。
+扩展函数把 `target::method()` 映射到 Java 侧实现，用于为特定宿主类型增加上下文能力（文件、集合、游戏对象等）。
+
+核心代码分布在 `FluxonRuntime`、`ExtensionBuilder`、`Environment`。
 
 ## 快速上手（Builder）
 
@@ -30,7 +32,9 @@ runtime.registerExtension(File.class, "fs:io")
 | `registerAsyncExtensionFunction(...)` | 异步扩展。 |
 | `registerSyncExtensionFunction(...)` | 主线程扩展。 |
 
-命名空间前缀会与函数名组合为脚本调用形态，例如 `fs:io` + `readText` -> `fs:io::readText()`。
+命名空间前缀会与函数名组合为脚本调用形态。
+
+例如 `fs:io` + `readText` -> `fs:io::readText()`。
 
 ## 查找与匹配流程
 
@@ -41,13 +45,16 @@ runtime.registerExtension(File.class, "fs:io")
 
 ## 实战提示
 
-- 复杂类型示例可参考 `core/runtime/function/extension` 包（`Path`, `Collection` 等）。
+- 复杂类型示例可参考
+  [`core/src/main/java/org/tabooproject/fluxon/runtime/function/extension`](https://github.com/TabooLib/fluxon/tree/master/core/src/main/java/org/tabooproject/fluxon/runtime/function/extension)（`Path`、`Collection` 等）。
 - 想支持索引访问 (`obj[index]`)，需实现 `IndexAccessor`（详见运行时章节）。
-- 调试：`Environment#getRootExtensionFunctions()` 查看当前映射；若调用失败，检查是否遗漏 `import` 或命名空间不一致。`dumpFluxonCatalog` 可确认导出签名。
+- 调试：`Environment#getRootExtensionFunctions()` 查看当前映射。
+- 若调用失败，检查是否遗漏 `import` 或命名空间不一致。
+- `dumpFluxonCatalog` 可确认导出签名。
 
 ## 相关链接
 
-- `developer/runtime-registry`
-- `developer/export-bridge`
-- `runtime/environment`
-- `runtime/interpreter`
+- [运行时注册 API](/developer/runtime-registry)
+- [@Export 与桥接](/developer/export-bridge)
+- [环境与作用域](/runtime/environment)
+- [解释器执行流](/runtime/interpreter)

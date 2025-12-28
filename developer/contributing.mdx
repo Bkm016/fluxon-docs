@@ -24,10 +24,15 @@ description: "参与 Fluxon 核心开发的流程与要求"
 ## 推荐工作流
 
 1. **拉取最新主分支**，创建功能分支。
-2. **修改核心逻辑** 时，优先通过 `FluxonRuntime` 的注册 API（`registerFunction` / `registerExtensionFunction` / `ExportRegistry`），确保脏标记与缓存正确更新。
-3. **同步工具链**：新增或修改函数后，运行 `./gradlew :core:dumpFluxonCatalog` 并用 `vscode-extension/scripts/sync-catalog.js` 更新补全数据。
-4. **补充测试与文档**：在 `core/src/test/java` 添加覆盖（可用 `FluxonTestUtil.runSilent` 对比解释/编译结果）；更新 Mintlify 对应章节。
-5. **自查**：`./gradlew test`（必要时 `jmh`/性能测试），确认无新增警告或未跟踪文件（如 `dump/TestScript.class`）。
+2. **修改核心逻辑** 时，优先通过 `FluxonRuntime` 的注册 API（`registerFunction` / `registerExtensionFunction` / `ExportRegistry`）
+   。
+   确保脏标记与缓存正确更新。
+3. **同步工具链**：新增或修改函数后，运行 `./gradlew :core:dumpFluxonCatalog`。
+   然后用 `vscode-extension/scripts/sync-catalog.js` 更新补全数据。
+4. **补充测试与文档**：在 `core/src/test/java` 添加覆盖。
+   可用 `FluxonTestUtil.runSilent` 对比解释/编译结果，并更新 Mintlify 对应章节。
+5. **自查**：运行 `./gradlew test`（必要时 `jmh`/性能测试）。
+   确认无新增警告或未跟踪文件（如 `dump/TestScript.class`）。
 6. 提交/PR 时附上变更要点、测试结果以及是否需要重新发布函数目录。
 
 ## 代码规范与注意事项

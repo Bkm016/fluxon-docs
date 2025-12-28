@@ -1,34 +1,18 @@
 ---
-title: "函数目录与补全"
-description: "fluxon-functions.json 的生成流程与消费方式"
+title: "生成与同步函数目录"
+description: "当函数/扩展变化时如何刷新 fluxon-functions.json"
 ---
 
-Fluxon 通过一份统一的 `fluxon-functions.json` 目录把运行时函数暴露给 IDE（补全）、文档与其他工具。它由 `core` 模块导出，包含系统函数与扩展函数的元数据（命名空间、参数个数、是否异步/主线程等）。
+<Note>字段定义与 JSON 结构以 [函数目录](/appendix/function-catalog) 为准（canonical）。本页只描述“刷新与同步”的工作流。</Note>
 
-<Note>关于该 JSON 的字段定义与结构，请以 `appendix/function-catalog` 为准（canonical）。本页仅描述“如何生成与同步”。</Note>
+## 工作流
 
-## 生成目录
+1. **导出目录**：在仓库根目录运行 `./gradlew :core:dumpFluxonCatalog`（默认输出 `core/build/fluxon-functions.json`）。
+2. **同步到 VS Code**：在 `vscode-extension` 目录运行 `pnpm run sync-catalog`（详见 [VS Code 扩展](/tooling/vscode)）。
+3. **更新文档**：目录字段结构有变化时只更新 [函数目录](/appendix/function-catalog)；只是函数新增/改名/参数变化时更新对应讲解页，
+   并确保示例与导出的目录一致。
 
-`core` 模块提供 `dumpFluxonCatalog` 任务（调用 `org.tabooproject.fluxon.tool.FunctionDumper`）：
-
-```bash
-./gradlew :core:dumpFluxonCatalog
-```
-
-默认输出：`core/build/fluxon-functions.json`
-
-建议在以下场景重新执行：
-
-- 新增/删除/重命名运行时函数或扩展函数。
-- 修改参数个数、命名空间、`async`/`primarySync` 属性。
-- 发布 VS Code 扩展或更新文档参考页前。
-
-## 同步到消费方
-
-- **VS Code 扩展**：在导出后运行扩展内的同步脚本（详见 `tooling/vscode`）。
-- **文档**：若目录结构有变化，仅更新 `appendix/function-catalog`；若只是函数新增/变更，则更新对应讲解页，并确保示例与导出的目录一致。
-
-## 什么时候必须同步
+## 何时执行
 
 - 新增/删除/重命名运行时函数或扩展函数。
 - 修改参数个数、命名空间、`async`/`primarySync` 属性。
@@ -36,5 +20,5 @@ Fluxon 通过一份统一的 `fluxon-functions.json` 目录把运行时函数暴
 
 ## 相关链接
 
-- `appendix/function-catalog`（字段定义与结构，canonical）
-- `tooling/vscode`
+- [函数目录（canonical）](/appendix/function-catalog)
+- [VS Code 扩展](/tooling/vscode)

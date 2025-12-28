@@ -3,7 +3,7 @@ title: "函数与异步"
 description: "函数定义、调用与异步基础"
 ---
 
-在 Fluxon 中，**函数** 用于封装可复用的计算逻辑。运行时还提供两类“调度语义”：
+**函数** 用于封装可复用的计算逻辑。运行时还提供两类“调度语义”：
 
 - `async def`：在运行时线程池执行函数体，并返回 `Future/CompletableFuture`。
 - `sync def`：在宿主提供的主线程执行器上执行函数体，并返回 `CompletableFuture`。
@@ -129,7 +129,8 @@ async def delay(ms) = sleep(&ms)
 
 ### 主线程函数（sync def）
 
-如果你需要把一段逻辑固定在宿主的“主线程”执行（例如游戏/GUI 主线程），可以用 `sync def` 定义主线程函数。调用主线程函数会返回 `CompletableFuture`，通常需要配合 `await` 获取结果：
+如果你需要把一段逻辑固定在宿主的“主线程”执行（例如游戏/GUI 主线程），可以用 `sync def` 定义主线程函数。
+调用主线程函数会返回 `CompletableFuture`，通常需要配合 `await` 获取结果：
 
 ```fluxon
 sync def onMainThread(x) = &x + 1
@@ -137,11 +138,12 @@ sync def onMainThread(x) = &x + 1
 result = await onMainThread(41)
 ```
 
-<Note>主线程执行器由宿主通过 `FluxonRuntime#setPrimaryThreadExecutor` 提供；详见 `developer/runtime-config`。</Note>
+<Note>主线程执行器由宿主通过 `FluxonRuntime#setPrimaryThreadExecutor` 提供；详见 [运行时配置与调试](/developer/runtime-config)。</Note>
 
 ### 等待与结果获取
 
-`await expr` 会在 `expr` 返回 `Future/CompletableFuture` 时等待其完成，否则直接返回 `expr` 的值。它是一个“可等待也可直通”的表达式，因此可以自然嵌入控制流与函数返回。
+`await expr` 会在 `expr` 返回 `Future/CompletableFuture` 时等待其完成，否则直接返回 `expr` 的值。
+它是一个“可等待也可直通”的表达式，因此可以自然嵌入控制流与函数返回。
 
 例如：
 
@@ -152,6 +154,8 @@ async def loadAndLog(id) = {
 	return &user
 }
 ```
+
+<Note>示例中的 `&user.name` 使用成员访问 `.`（反射）。嵌入式集成默认关闭反射访问，如需使用请参阅 [成员访问（.）](/language/member-access)。</Note>
 
 <Warning>示例中的 `fetchUser` 与 `log` 作为虚构函数，仅用于说明异步调用形态。</Warning>
 
@@ -206,7 +210,11 @@ async def loadWithFallback(id) = {
 
 ## 上下文调用
 
-除了普通的函数调用外，Fluxon 还提供 **上下文调用**，用于把某个值临时设为 “当前目标”，在其基础上调用扩展函数。例如，给玩家发送一个信息，可以写作 `&player::sendMessage("Hello")`，而不是 `sendMessage(&player, "Hello")`。
+除了普通的函数调用外，Fluxon 还提供 **上下文调用**。
+
+它用于把某个值临时设为“当前目标”，并在其基础上调用扩展函数。
+
+例如，给玩家发送一个信息，可以写作 `&player :: sendMessage("Hello")`，而不是 `sendMessage(&player, "Hello")`。
 
 ### 基本语法
 
@@ -319,11 +327,13 @@ time() :: {
 - 块内可直接调用与 `time` 相关的扩展函数，例如 `formatTimestamp`。
 - 块执行完毕后，原来的上下文目标会自动恢复（不会泄漏到块外）。
 
-<Note>实现上，解释器会在进入上下文调用时保存旧的 `target`，把 `target` 设为 `::` 左侧表达式的结果，执行完右侧表达式或代码块后再恢复旧值。字节码生成器也遵循同样的逻辑。</Note>
+<Note>实现上，解释器会在进入上下文调用时保存旧的 `target`，把 `target` 设为 `::` 左侧表达式的结果，
+执行完右侧表达式或代码块后再恢复旧值。字节码生成器也遵循同样的逻辑。</Note>
 
 ## 相关链接
 
-- `appendix/glossary`
-- `appendix/function-catalog`（函数目录，canonical）
-- `developer/runtime-registry`（宿主注册函数/异步函数）
-- `developer/extension-api`（扩展函数与上下文调用）
+- [术语表](/appendix/glossary)
+- [函数目录（canonical）](/appendix/function-catalog)
+- [成员访问（.）](/language/member-access)
+- [运行时注册 API](/developer/runtime-registry)（宿主注册函数/异步函数）
+- [扩展函数 API](/developer/extension-api)（扩展函数与上下文调用）

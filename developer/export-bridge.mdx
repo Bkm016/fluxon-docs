@@ -5,9 +5,20 @@ description: "ExportRegistry 如何把 Java 方法变成扩展函数"
 
 ## 概览
 
-`@Export` 用于把 Java 方法桥接为 Fluxon 扩展函数（`target::method(...)`），避免手写 `registerExtensionFunction(...)` 的样板代码。底层由 `ExportRegistry` 扫描方法并生成 `ClassBridge`（字节码桥接器），实现“无反射调用 + 参数类型校验”。
+`@Export` 用于把 Java 方法桥接为 Fluxon 扩展函数（`target::method(...)`），避免手写注册样板代码。
 
-核心类位于 `core/src/main/java/org/tabooproject/fluxon/runtime/java`：`ExportRegistry`, `ExportMethod`, `ClassBridge`, `ExportBytecodeGenerator`。
+底层由 `ExportRegistry` 扫描导出类并生成 `ClassBridge`（字节码桥接器），实现：
+
+- 无反射调用
+- 统一的参数类型校验
+
+核心代码位于
+[`core/src/main/java/org/tabooproject/fluxon/runtime/java`](https://github.com/TabooLib/fluxon/tree/master/core/src/main/java/org/tabooproject/fluxon/runtime/java)，主要包括：
+
+- `ExportRegistry`
+- `ExportMethod`
+- `ClassBridge`
+- `ExportBytecodeGenerator`
 
 ## 快速上手
 
@@ -72,11 +83,12 @@ runtime.getExportRegistry().registerClassMethods(HashObject.class, "fs:crypto", 
 - `FluxonRuntime#getExtensionFunctions()` / `Environment#getRootExtensionFunctions()`：查看类型到扩展函数的映射。
 - `import` 是否缺失：带命名空间的扩展需要脚本 `import 'namespace'`（如 `fs:crypto`）。
 - target 是否正确：扩展函数依赖 `target` 的宿主类型；target 为 `null` 或类型不匹配会导致“找不到函数”或调用失败。
-- 新增导出未生效：检查是否重建了 `Environment`（刷新缓存/派发表），并在需要时重跑 `./gradlew :core:dumpFluxonCatalog` 同步目录。
+- 新增导出未生效：检查是否重建了 `Environment`（刷新缓存/派发表）。
+  并在需要时重跑 `./gradlew :core:dumpFluxonCatalog` 同步目录。
 
 ## 相关链接
 
-- `developer/annotations`
-- `developer/extension-api`
-- `developer/runtime-registry`
-- `appendix/function-catalog`（函数目录，canonical）
+- [运行时注解与可选参数](/developer/annotations)
+- [扩展函数 API](/developer/extension-api)
+- [运行时注册 API](/developer/runtime-registry)
+- [函数目录（canonical）](/appendix/function-catalog)

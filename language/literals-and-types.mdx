@@ -3,7 +3,8 @@ title: "字面量与类型"
 description: "字面量、集合与类型建模基础"
 ---
 
-在 Fluxon 中，**字面量** 是直接写在脚本中的具体值，比如 `42`、`"hello"` 或 `[1, 2, 3]`。**类型** 描述这些值的形态（数字、字符串、列表等），并决定它们可以参与的运算方式。理解两者之间的关系，有助于快速判断脚本中每个常量的含义与用途。
+**字面量** 是直接写在脚本中的值，例如 `42`、`"hello"` 或 `[1, 2, 3]`。**类型** 描述这些值的形态（数字、字符串、列表等），
+并决定它们可以参与的运算方式。
 
 ## 数字
 
@@ -47,7 +48,7 @@ Fluxon 的词法规则允许相对宽松的标识符形式：
 - 后续字符可以包含数字、下划线以及 `-`。
 - 只要文本满足上述规则并且不是关键字（如 `if`、`async`），就可以直接作为字符串字面量使用。
 
-```fluxon highlight={2} 
+```fluxon highlight={2}
 color = red               // 等价于 "red"
 服务器状态 = 正常           // 中文标识符同样视为字符串
 log-level = info          // 中划线可用于非首字符
@@ -96,10 +97,11 @@ config = [host: "localhost", port: 8080]
 headers = ["Content-Type": "application/json"]
 ```
 
-掌握上述基础字面量与类型后，你可以在变量赋值、函数参数和控制流中自由组合它们，构建更复杂、更可读的表达式；其他章节会进一步介绍如何在控制流、函数与并发中使用这些值。
+掌握上述基础字面量与类型后，你可以在变量赋值、函数参数和控制流中自由组合它们，构建更复杂、更可读的表达式；
+其他章节会进一步介绍如何在控制流、函数与并发中使用这些值。
 
 ## 相关链接
 
-- `language/variables-and-references`
-- `language/operators-and-priority`
-- `language/control-flow`
+- [变量与引用](/language/variables-and-references)
+- [运算符与优先级](/language/operators-and-priority)
+- [控制流](/language/control-flow)

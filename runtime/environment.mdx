@@ -5,7 +5,8 @@ description: "Environment 如何承载函数、变量与扩展"
 
 ## 概览
 
-`Environment` 是 Fluxon 执行期的“作用域 + 符号表”。解释器与编译执行引擎都会基于同一个 `Environment` 完成变量读写、函数调用与扩展函数分派（`target::method(...)`）。
+`Environment` 是 Fluxon 执行期的“作用域 + 符号表”。解释器与编译执行引擎都会基于同一个 `Environment` 完成变量读写、
+函数调用与扩展函数分派（`target::method(...)`）。
 
 它管理的核心要素：
 
@@ -14,7 +15,8 @@ description: "Environment 如何承载函数、变量与扩展"
 - **变量**：根变量（全局）与局部变量（函数调用作用域）。
 - **上下文目标**：`target` 槽位（由 `::` 调用临时写入）。
 
-<Note>`Environment` 通常通过 `FluxonRuntime#getInstance().newEnvironment()` 创建。注册新的函数/扩展/变量后，重新创建环境以刷新运行时缓存。</Note>
+<Note>`Environment` 通常通过 `FluxonRuntime#getInstance().newEnvironment()` 创建。注册新的函数/扩展/变量后，
+重新创建环境以刷新运行时缓存。</Note>
 
 ## Root 与子环境
 
@@ -25,14 +27,15 @@ description: "Environment 如何承载函数、变量与扩展"
 
 普通函数通过 `Environment#getFunction(name)` 在根函数表中查找；不存在会抛出 `FunctionNotFoundError`。
 
-命名空间函数（如 `fs:time`）需要脚本先 `import 'fs:time'` 才会被解析到（见 `appendix/glossary`）。
+命名空间函数（如 `fs:time`）需要脚本先 `import 'fs:time'` 才会被解析到（见 [术语表](/appendix/glossary)）。
 
 ## 扩展函数解析（`target::method`）
 
 扩展函数的匹配依赖 `target` 的宿主类型：
 
 - 解析器在可优化的场景下会为调用点生成 `extensionPositionIndex`，运行时会使用 `root.dispatchTables[index]` 快速解析。
-- 对于动态注册或无法提前编号的调用点，会回退到 `root.extensionFunctions.get(name)` 的映射，并按“精确类型 → isAssignableFrom”顺序匹配。
+- 对于动态注册或无法提前编号的调用点，会回退到 `root.extensionFunctions.get(name)` 的映射，并按“精确类型 →
+  isAssignableFrom”顺序匹配。
 
 <Note>如果你在运行中动态注册了扩展函数，旧的 `Environment` 可能不会包含新的派发表缓存；建议在注册完成后重新 `newEnvironment()`。</Note>
 
@@ -58,8 +61,8 @@ description: "Environment 如何承载函数、变量与扩展"
 
 ## 相关链接
 
-- `runtime/interpreter`
-- `runtime/execution-engine`
-- `developer/runtime-registry`
-- `developer/extension-api`
-- `developer/troubleshooting`
+- [解释器执行流](/runtime/interpreter)
+- [编译执行引擎](/runtime/execution-engine)
+- [运行时注册 API](/developer/runtime-registry)
+- [扩展函数 API](/developer/extension-api)
+- [故障排查](/developer/troubleshooting)

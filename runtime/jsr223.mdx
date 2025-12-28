@@ -3,7 +3,8 @@ title: "JSR223 脚本引擎"
 description: "通过 javax.script.ScriptEngine 在 JVM 中执行 Fluxon"
 ---
 
-Fluxon 提供 `core-jsr223` 模块以支持 JSR223（`javax.script`）标准接口：你可以用 `ScriptEngineManager` 获取名为 `fluxon` 的脚本引擎，并在 Java 应用中执行 Fluxon 代码。
+Fluxon 提供 `core-jsr223` 模块以支持 JSR223（`javax.script`）标准接口：你可以用 `ScriptEngineManager` 获取名为 `fluxon`
+的脚本引擎，并在 Java 应用中执行 Fluxon 代码。
 
 ## 添加依赖
 
@@ -40,9 +41,12 @@ public class FluxonJsr223Demo {
 
 ## 与宿主注册 API 的关系
 
-JSR223 引擎底层仍使用 `FluxonRuntime.getInstance().newEnvironment()` 创建环境，因此你通过 `FluxonRuntime` 注册的系统函数/扩展函数也会对 JSR223 引擎生效。宿主注册方式见：
+JSR223 引擎底层仍使用 `FluxonRuntime.getInstance().newEnvironment()` 创建环境，因此你通过 `FluxonRuntime` 注册的系统函数/
+扩展函数也会对 JSR223 引擎生效。
 
-- `developer/runtime-registry`
-- `developer/extension-api`
-- `developer/export-bridge`
+## 相关链接
 
+- [运行时注册 API](/developer/runtime-registry)
+- [扩展函数 API](/developer/extension-api)
+- [@Export 与桥接](/developer/export-bridge)
+- [命令行与 REPL](/guides/cli)

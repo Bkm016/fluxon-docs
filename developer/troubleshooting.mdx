@@ -5,16 +5,26 @@ description: "常见问题、错误信息与排查路径"
 
 ## 概览
 
-建议按“解析 → 分派 → 数据 → 并发”分层排查：先用错误类型快速定位，再补齐现场信息（target/参数/变量/线程）以缩小范围。
+建议按“解析 → 分派 → 数据 → 并发”分层排查。
+
+先用错误类型快速定位，再补齐现场信息（target/参数/变量/线程）以缩小范围。
 
 ## 快速定位
 
-| 阶段 | 典型症状 | 立即检查 |
-| --- | --- | --- |
-| 解析 | `MultipleParseException` | `ex.formatDiagnostic()` 打印源码摘录；REPL 语句前加 `$` 查看 AST |
-| 分派 | `FunctionNotFoundError` / `EvaluatorNotFoundError` | `Environment#getRootFunctions()`/`getRootExtensionFunctions()`；命名空间与 target 类型是否匹配 |
-| 数据 | `ArgumentTypeMismatchError` / `VariableNotFoundError` / `IndexAccessError` / `VoidError` | `FunctionContext#toString()`、`availableVariables`、`IndexErrorType` |
-| 并发 | 主线程函数跑在后台 / 异步任务堆积 | `registerPrimarySyncFunction` 用法、`ThreadPoolManager#getActiveTaskCount()`、执行器配置 |
+下面列出各阶段的典型错误与立即检查项：
+
+- **解析**：`MultipleParseException`
+	- 立即检查：`ex.formatDiagnostic()` 打印源码摘录
+	- REPL：语句前加 `$` 输出 AST
+- **分派**：`FunctionNotFoundError` / `EvaluatorNotFoundError`
+	- 立即检查：`Environment#getRootFunctions()` / `getRootExtensionFunctions()`
+	- 命名空间与 target 类型是否匹配
+- **数据**：`ArgumentTypeMismatchError` / `VariableNotFoundError` / `IndexAccessError` / `VoidError`
+	- 立即检查：`FunctionContext#toString()`（函数名/target/参数）
+	- 参考：`availableVariables`、`IndexErrorType`
+- **并发**：主线程函数跑在后台 / 异步任务堆积
+	- 立即检查：`registerPrimarySyncFunction` 用法
+	- 观察：`ThreadPoolManager#getActiveTaskCount()` 与执行器配置
 
 ## 解析错误（MultipleParseException）
 
@@ -26,14 +36,17 @@ description: "常见问题、错误信息与排查路径"
 
 ### FunctionNotFoundError
 
-- 注册是否生效：`Environment#getRootFunctions()` / `getRootExtensionFunctions()` 查看；缺失则重新注册并调用 `runtime.newEnvironment()` 触发 bake。
+- 注册是否生效：`Environment#getRootFunctions()` / `getRootExtensionFunctions()` 查看。
+  缺失则重新注册并调用 `runtime.newEnvironment()` 触发 bake。
 - 命名空间：`registerFunction("fs", "readText", …)` 对应脚本 `fs:readText`，漏前缀会直接失败。
 - target 类型：扩展函数要求 `target` 与注册类型一致；`null::fn()` 会因 target 为空而匹配不到。
 - 目录一致性：必要时重跑 `./gradlew :core:dumpFluxonCatalog`，确认导出的签名与预期一致。
 
 ### EvaluatorNotFoundError
 
-新增语法未提供求值器导致。检查是否在 `runtime.function`/`index` 注册 evaluator；如果语法应被禁止，在解析阶段直接抛 `ParseException`，避免运行时才失败。
+- 新增语法未提供求值器导致。
+- 检查是否在 `runtime.function` / `index` 注册 evaluator。
+- 如果语法应被禁止，在解析阶段直接抛 `ParseException`，避免运行时才失败。
 
 ## 数据与类型问题
 
@@ -60,8 +73,10 @@ description: "常见问题、错误信息与排查路径"
 
 ## 并发与执行器
 
-- 主线程函数：仅通过 `registerPrimarySyncFunction` / `registerSyncExtensionFunction` 标记；并使用 `FluxonRuntime#setPrimaryThreadExecutor` 指向宿主主线程。
-- 异步任务：`ThreadPoolManager#getActiveTaskCount()` 观察堆积；出现 `CallerRunsPolicy` 表示队列满，新任务会落到调用线程，需要拆批或扩容。
+- 主线程函数：仅通过 `registerPrimarySyncFunction` / `registerSyncExtensionFunction` 标记。
+- 执行器：使用 `FluxonRuntime#setPrimaryThreadExecutor` 指向宿主主线程。
+- 异步任务：`ThreadPoolManager#getActiveTaskCount()` 观察堆积。
+- 若出现 `CallerRunsPolicy`，表示队列满，新任务会落到调用线程；需要拆批或扩容。
 - 关闭：`ThreadPoolManager#shutdown()` 前最好等待 `awaitTermination`，避免异步任务被硬中断。
 
 ## 现场信息速查
@@ -75,8 +90,8 @@ description: "常见问题、错误信息与排查路径"
 
 ## 相关链接
 
-- `guides/cli`
-- `runtime/interpreter`
-- `runtime/environment`
-- `developer/runtime-config`
-- `appendix/glossary`
+- [命令行与 REPL](/guides/cli)
+- [解释器执行流](/runtime/interpreter)
+- [环境与作用域](/runtime/environment)
+- [运行时配置与调试](/developer/runtime-config)
+- [术语表](/appendix/glossary)

@@ -3,7 +3,7 @@ title: "运算符与优先级"
 description: "算术、比较、逻辑等运算符及其结合规则"
 ---
 
-在 Fluxon 中，大部分语法都是围绕表达式构建的，运算符决定了表达式中各个子表达式如何组合与求值。本章列出核心运算符，并说明它们的优先级和结合性，方便在阅读复杂表达式时判断实际的求值顺序。
+运算符决定表达式的组合与求值顺序。本章汇总核心运算符，并说明它们的优先级与结合性，便于阅读复杂表达式。
 
 ## 运算符总览
 
@@ -71,6 +71,7 @@ Fluxon 还提供若干与控制流和语义糖相关的运算符：
 | `?:`     | Elvis 运算符         | `&name ?: "anonymous"`      |
 | `&`      | 变量引用运算符       | `sum = &a + &b`              |
 | `::`     | 上下文调用运算符     | `&list :: size()`            |
+| `.`      | 成员访问（反射）     | `&user.name` / `&list.size()` |
 
 这些运算符在其他章节中有详细说明，本章主要关心它们在大表达式中的优先级关系。
 
@@ -81,7 +82,7 @@ Fluxon 的表达式解析采用自顶向下递归下降和优先级划分。
 | 类别                     | 示例                             |
 |--------------------------|----------------------------------|
 | 括号与字面量             | `(expr)`、`[1, 2]`、`[k: v]`     |
-| 函数调用                 | `f(x)`、`f a b`                  |
+| 成员访问与函数调用       | `obj.name`、`obj.method()`、`f(x)` |
 | 上下文调用 `::`          | `&target :: func()`              |
 | 一元运算符               | `!expr`、`-expr`、`&name`        |
 | 乘除模                   | `*`、`/`、`%`                    |
@@ -183,6 +184,7 @@ result = &list :: filter(fn) :: size() > 0 && &enabled
 
 ## 相关链接
 
-- `language/literals-and-types`
-- `language/variables-and-references`
-- `language/functions-and-async`
+- [字面量与类型](/language/literals-and-types)
+- [变量与引用](/language/variables-and-references)
+- [成员访问（.）](/language/member-access)
+- [函数与异步](/language/functions-and-async)

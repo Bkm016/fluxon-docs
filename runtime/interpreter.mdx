@@ -3,7 +3,8 @@ title: "解释器执行流"
 description: "解释器如何评估 AST 并派发函数调用"
 ---
 
-Fluxon 的解释器建立在 `Function` / `FunctionContext` / `Environment` 三个核心抽象之上：解析器产出 AST，解释器按节点类型派发 evaluator，并在函数调用处交由运行时标准库（`Intrinsics`）处理 `async` / `primarySync` 等语义。
+Fluxon 的解释器建立在 `Function` / `FunctionContext` / `Environment` 三个核心抽象之上。解析器产出 AST，解释器按节点类型派发
+evaluator；在函数调用处，则交由运行时标准库（`Intrinsics`）统一处理 `async` / `primarySync` 等语义。
 
 ## 执行入口
 
@@ -12,7 +13,7 @@ Fluxon 的解释器建立在 `Function` / `FunctionContext` / `Environment` 三�
 - `Fluxon.eval(source)` → 解析 → `Interpreter.execute(parseResults)`
 - `Interpreter` 在执行过程中会维护 `Environment`（变量、函数、扩展函数与上下文目标 `target`）。
 
-<Note>编译执行（字节码生成与 `RuntimeScriptBase`）见 `runtime/execution-engine`。</Note>
+<Note>编译执行（字节码生成与 `RuntimeScriptBase`）见 [编译执行引擎](/runtime/execution-engine)。</Note>
 
 ## 函数抽象：`Function`
 
@@ -42,18 +43,20 @@ Fluxon 的解释器建立在 `Function` / `FunctionContext` / `Environment` 三�
 
 ## 全局对象与上下文调用
 
-- `Environment` 维护一个 `target` 槽位以实现上下文调用：`value :: func(...)` 会临时将 `target` 设为 `value`，并在执行结束后恢复旧值。
-- 扩展函数的解析与匹配依赖 `target` 的宿主类型（参见 `developer/extension-api`）。
+- `Environment` 维护一个 `target` 槽位以实现上下文调用：`value :: func(...)` 会临时将 `target` 设为 `value`，
+  并在执行结束后恢复旧值。
+- 扩展函数的解析与匹配依赖 `target` 的宿主类型（参见 [扩展函数 API](/developer/extension-api)）。
 
 ## 调试建议
 
 - 当遇到“函数找不到”或“参数类型错误”时，可以直接打印 `FunctionContext#toString()`，其中包含函数名、目标对象与参数信息。
-- 需要追踪异步/主线程调度时，可结合 `Function#isAsync` / `Function#isPrimarySync` 与 `ThreadPoolManager` 的观测信息排查（参见 `developer/runtime-config` 与 `developer/troubleshooting`）。
+- 需要追踪异步/主线程调度时：结合 `Function#isAsync` / `Function#isPrimarySync` 与 `ThreadPoolManager` 的观测信息排查。
+- 参考：[运行时配置与调试](/developer/runtime-config) 与 [故障排查](/developer/troubleshooting)。
 
 ## 相关链接
 
-- `runtime/environment`
-- `runtime/execution-engine`
-- `developer/runtime-registry`
-- `developer/runtime-config`
-- `developer/troubleshooting`
+- [环境与作用域](/runtime/environment)
+- [编译执行引擎](/runtime/execution-engine)
+- [运行时注册 API](/developer/runtime-registry)
+- [运行时配置与调试](/developer/runtime-config)
+- [故障排查](/developer/troubleshooting)

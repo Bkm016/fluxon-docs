@@ -5,12 +5,14 @@ description: "Fluxon.compile 的字节码生成与运行时桥接"
 
 ## 概览
 
-Fluxon 默认以解释器运行，但也支持将脚本编译为 Java 8 字节码并直接执行。编译模式的入口是 `Fluxon.compile(...)`，产物为一组 `.class` 字节码：
+Fluxon 默认以解释器运行，但也支持将脚本编译为 Java 8 字节码并直接执行。编译模式的入口是 `Fluxon.compile(...)`，产物为一组
+`.class` 字节码：
 
 - 主脚本类：继承 `RuntimeScriptBase`，实现脚本主体逻辑。
 - 内部类：用于 `def`/lambda 等脚本定义（同样由字节码生成器输出）。
 
-编译后的代码不会绕开运行时：函数调用、扩展函数匹配（`target::method`）、索引访问（`obj[index]`）等依然交由运行时的 `Intrinsics`/`Environment`/注册表处理，因此语义应与解释器保持一致。
+编译后的代码不会绕开运行时：函数调用、扩展函数匹配（`target::method`）、索引访问（`obj[index]`）等依然交由运行时的
+`Intrinsics`/`Environment`/注册表处理，因此语义应与解释器保持一致。
 
 ## 快速上手
 
@@ -33,7 +35,8 @@ Object out = script.eval(env);
 System.out.println(out);
 ```
 
-调试字节码时可用：`CompileResult#dump(File)` 输出 `.class` 文件，或用 `CompileResult#defineClass(FluxonClassLoader)` 手动控制类加载过程。
+调试字节码时可用：`CompileResult#dump(File)` 输出 `.class` 文件，或用 `CompileResult#defineClass(FluxonClassLoader)`
+手动控制类加载过程。
 
 ## `RuntimeScriptBase` 的角色
 
@@ -42,16 +45,20 @@ System.out.println(out);
 - 运行时错误会通过 `RuntimeScriptBase#attachRuntimeError(...)` 补充源码摘录，便于定位行列。
 - 生成类会实现 `clone()`，用于复制脚本实例（避免共享可变状态）。
 
-## 索引访问器 (`runtime/index`)
+## 索引访问器（`org.tabooproject.fluxon.runtime.index`）
 
 - `IndexAccessor` 抽象了 `target[index]` 的读写行为，既可服务解释器，也可让编译器在遇到 `[]` 语法时绑定到正确的宿主类型。
 - `IndexAccessorRegistry` 利用 Java SPI 自动加载第三方实现，并允许在运行时调用 `registerAccessor` 提高优先级。
 - 索引访问由 `Intrinsics` 统一派发到底层注册表，因此解释与编译模式共享同一套行为与错误类型（如 `IndexAccessError`）。
 
-## 导出桥 (`runtime/java`)
+## 导出桥（`org.tabooproject.fluxon.runtime.java`）
 
 - `ExportRegistry` 扫描 `@Export` 方法并注册为扩展函数；底层通过 `ClassBridge`（字节码生成）避免反射调用。
-- 编译后的脚本在调用处仍会走 `Intrinsics.callFunction(...)` → `Environment#getExtensionFunction(...)` → `Function#call(...)`，因此只要注册表一致，行为与解释器一致。
+- 编译后的脚本在调用处仍会走相同的派发链路：
+	- `Intrinsics.callFunction(...)`
+	- `Environment#getExtensionFunction(...)`
+	- `Function#call(...)`
+- 因此只要注册表一致，行为就应与解释器一致。
 
 ## 何时选用编译模式
 
@@ -63,11 +70,12 @@ System.out.println(out);
 
 1. **生成调试**：在编译产物中打印 `getClass().getName()`，确认字节码是否加载到预期的 ClassLoader。
 2. **索引冲突**：如遇 `IndexAccessor` 顺序问题，记得调用 `registerAccessor` 将自定义实现插入列表开头。
-3. **导出同步**：任何新的 `@Export` 类都必须在运行时通过 `ExportRegistry#registerClass` 注册，并在需要时重建 `Environment`，确保缓存与派发表可见。
+3. **导出同步**：任何新的 `@Export` 类都必须在运行时通过 `ExportRegistry#registerClass` 注册，并在需要时重建 `Environment`，
+   确保缓存与派发表可见。
 
 ## 相关链接
 
-- `runtime/interpreter`
-- `runtime/environment`
-- `developer/export-bridge`
-- `developer/runtime-config`
+- [解释器执行流](/runtime/interpreter)
+- [环境与作用域](/runtime/environment)
+- [@Export 与桥接](/developer/export-bridge)
+- [运行时配置与调试](/developer/runtime-config)

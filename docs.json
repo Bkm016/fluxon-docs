@@ -37,7 +37,8 @@
               "language/variables-and-references",
               "language/operators-and-priority",
               "language/control-flow",
-              "language/functions-and-async"
+              "language/functions-and-async",
+              "language/member-access"
             ]
           },
           {

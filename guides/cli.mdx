@@ -3,25 +3,18 @@ title: "命令行与 REPL"
 description: "介绍 fluxon CLI、脚本执行与交互式体验"
 ---
 
-Fluxon 提供一个简单的交互式控制台（`core-console` 模块的 `org.tabooproject.fluxon.FluxonConsole`），适合用来试验语法、验证表达式结果与快速排错。
+Fluxon 提供一个交互式控制台（REPL）。它适合用来试验语法、验证表达式结果与快速排错。入口类是
+`org.tabooproject.fluxon.FluxonConsole`（`core-console` 模块）。
 
 ## 启动控制台
 
-在仓库根目录复制执行以下命令即可自动构建并启动控制台：
-
-```bash
-# macOS / Linux
-./gradlew :core-console:installDist && ./core-console/build/install/core-console/bin/core-console
-
-# Windows PowerShell
-./gradlew :core-console:installDist; .\core-console\build\install\core-console\bin\core-console.bat
-```
-
-短时间试用也可以直接运行（使用 Gradle 的 `run` 任务）：
+最简单的启动方式（使用 Gradle 的 `run` 任务）：
 
 ```bash
 ./gradlew :core-console:run
 ```
+
+如需 `installDist` 生成可分发脚本、查看完整内置命令表或导出函数目录，请参阅 [CLI 参考](/appendix/cli-reference)。
 
 启动后会出现 `fluxon> ` 提示符；控制台会在用户家目录创建 `.fluxon_history` 保存历史记录。
 
@@ -45,20 +38,13 @@ fluxon> &_ * 10
 
 <Note>REPL 内部通过 JSR223 `ScriptEngine` 执行脚本，会在同一会话中复用上下文（变量会保留）。</Note>
 
-## 常用命令
+## 常用命令（速记）
 
-| 命令 | 用途 |
-| --- | --- |
-| `:q`/`:quit`/`:exit` | 退出控制台。 |
-| `:c`/`:clear` | 清空当前已输入的脚本缓存，继续留在控制台。 |
-| `:l`/`:list` | 按行号列出本次会话输入的所有语句。 |
-| `:v`/`:vars` | 列出当前环境中的变量（含 `_`）。 |
-| `:h`/`:help` | 查看内置命令速览。 |
-| `Ctrl+C` | 取消当前行并清空缓存，不退出程序。 |
-| `Ctrl+D` | 直接结束程序。 |
-| `clear` | 清屏。 |
+- `:help`：查看内置命令速览。
+- `:vars`：查看当前变量（含 `_`）。
+- `:list`：按行号列出本次会话输入的语句。
 
-命令当前实现为**精确匹配**（区分大小写），并且需要带上前缀 `:`（例如 `:vars`）。
+命令实现为**精确匹配**（区分大小写），并且需要带上前缀 `:`；完整列表见 [CLI 参考](/appendix/cli-reference)。
 
 ## 查看变量
 
@@ -85,3 +71,9 @@ fluxon> $if &n <= 1 then 1 else factorial(&n - 1)
 ```
 
 控制台会输出解析结构与伪代码树，便于定位括号、`then/else`、代码块边界等问题。
+
+## 相关链接
+
+- [CLI 参考](/appendix/cli-reference)
+- [JSR223 脚本引擎](/runtime/jsr223)
+- [故障排查](/developer/troubleshooting)

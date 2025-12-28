@@ -12,7 +12,8 @@ Fluxon 的文档不是“另一个真相”。它的定位是：基于源码与�
 ## 事实来源（Source of Truth）
 
 - **源码与测试**：始终是唯一事实来源。新增语法或函数时优先补齐测试（如 `ContextCallTest`、`EnvironmentCacheTest`）。
-- **函数与扩展清单**：以 `./gradlew :core:dumpFluxonCatalog` 生成的 `core/build/fluxon-functions.json` 为准（VS Code 补全与文档引用同源）。
+- **函数与扩展清单**：以 `./gradlew :core:dumpFluxonCatalog` 生成的 `core/build/fluxon-functions.json` 为准。
+  VS Code 补全与文档引用同源。
 - **CLI 行为**：以 `core-console` 模块实现为准。
 
 ## 页面结构模板
@@ -42,35 +43,40 @@ description: "一句话说明这页解决什么问题"
 
 ## 写作与格式（必须遵守）
 
-- **命名与签名不得臆测**：函数名/参数个数/命名空间必须与实现一致；引用 Java 类时标注类名并尽量给出文件路径（例如 `FluxonRuntime.java`）。
+- **命名与签名不得臆测**：函数名/参数个数/命名空间必须与实现一致。
+  引用 Java 类时标注类名并尽量给出文件路径（例如 `FluxonRuntime.java`）。
 - **示例要可复制**：能运行的尽量给出完整命令与最小代码；无法运行的示例必须说明原因。
 - **代码块语言统一**：
   - Fluxon：` ```fluxon`
   - Java：` ```java`
   - Kotlin：` ```kotlin`
   - Shell：` ```bash`（Windows 可在代码中标注 PowerShell 变体）
-- **虚构能力必须显式提示**：如果示例为了展示形态而引用了项目未内置的函数/能力，必须使用 `<Warning>` 标注，并给出“如何在宿主侧注册该函数”的真实替代入口。
-- **术语统一**：新增术语时同步维护 `appendix/glossary`，避免同一概念多种叫法。
+- **虚构能力必须显式提示**：如果示例为了展示形态而引用了项目未内置的函数/能力，必须使用 `<Warning>` 标注。
+  并给出“如何在宿主侧注册该函数”的真实替代入口。
+- **术语统一**：新增术语时同步维护 [术语表](/appendix/glossary)，避免同一概念多种叫法。
+- **站内引用必须可点击**：引用其他文档页面使用 Markdown 链接（例如 `[命令行与 REPL](/guides/cli)`），
+  不要只写路径或用代码样式包裹。
 
 ## 修改与同步流程（最小闭环）
 
 1. **实现与测试**：先让行为在测试中站得住（解析/解释/编译一致性按项目测试策略执行）。
 2. **刷新函数目录（如适用）**：
    - 运行 `./gradlew :core:dumpFluxonCatalog` 生成 `core/build/fluxon-functions.json`。
-   - 如涉及 VS Code 扩展补全，同步目录（参考 `tooling/vscode`）。
+   - 如涉及 VS Code 扩展补全，同步目录（参考 [VS Code 扩展](/tooling/vscode)）。
 3. **更新文档（按影响面选择）**：
    - 语法/语义：`language/*`
    - 执行模型/嵌入：`runtime/*`
    - 宿主注册/导出/扩展：`developer/*`
    - 只影响使用路径：`guides/*`
-4. **检查 canonical 页面**：涉及“定义/字段/清单”的内容只在 canonical 页面维护（例如函数目录见 `appendix/function-catalog`），其他页面只链接引用。
+4. **检查 canonical 页面**：涉及“定义/字段/清单”的内容只在 canonical 页面维护。
+   例如函数目录见 [函数目录](/appendix/function-catalog)，其他页面只链接引用。
 5. **本地预览**：在 `mintlify-docs` 目录运行 `pnpm exec mint dev`，确保导航可达、无 404、示例展示正常。
 
 ## 发布前检查（与版本强相关）
 
 - `gradle.properties` 的 `version` 更新后：
-  - `guides/quickstart` 中的依赖坐标同步更新。
-  - `developer/release` 中的检查清单同步更新。
+  - [快速开始](/guides/quickstart) 中的依赖坐标同步更新。
+  - [发布流程](/developer/release) 中的检查清单同步更新。
 - 若运行时函数/扩展变化：
-  - `appendix/function-catalog`（canonical）与相关引用页保持一致。
-  - VS Code 扩展的函数目录同步无遗漏（参考 `tooling/vscode`）。
+  - [函数目录](/appendix/function-catalog)（canonical）与相关引用页保持一致。
+  - VS Code 扩展的函数目录同步无遗漏（参考 [VS Code 扩展](/tooling/vscode)）。
