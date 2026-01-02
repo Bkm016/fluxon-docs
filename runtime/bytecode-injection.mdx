@@ -3,7 +3,7 @@ title: "运行时字节码注入"
 description: "通过 fs:jvm 模块动态修改 Java 方法行为"
 ---
 
-`fs:jvm` 模块提供运行时字节码注入能力，可以在 JVM 运行时动态拦截 Java 方法调用，插入自定义逻辑或完全替换方法实现。这为运行时调试、热修复、AOP（面向切面编程）等场景提供了强大支持。
+该模块提供运行时字节码注入能力，可以在 JVM 运行时动态拦截 Java 方法调用，插入自定义逻辑或完全替换方法实现。这为运行时调试、热修复等场景提供了强大支持。
 
 <Note>
 此功能需要 Java Agent 支持，启动 JVM 时需要添加 `-javaagent` 参数。详见[前置要求](#前置要求)。
@@ -11,7 +11,20 @@ description: "通过 fs:jvm 模块动态修改 Java 方法行为"
 
 ## 前置要求
 
-### 1. 启动 Java Agent
+### 1. 环境准备
+
+使用该功能需要 `inst-core` 模块并手动注册 `jvm` 模块。
+
+```kotlin build.gradle.kts
+compileOnly("org.tabooproject.fluxon:core:1.4.5")
+compileOnly("org.tabooproject.fluxon:inst-core:1.4.5")
+```
+
+```java Code
+FunctionJvm.init(FluxonRuntime.getInstance());
+```
+
+### 2. 启动 Java Agent
 
 在 JVM 启动参数中添加：
 
@@ -27,7 +40,7 @@ tasks.withType<JavaExec> {
 }
 ```
 
-### 2. 导入模块
+### 3. 导入模块
 
 在 Fluxon 脚本中导入 `fs:jvm` 模块：
 
@@ -88,7 +101,7 @@ id = jvm::inject(
 |------|------|------|
 | `target` | String | 目标方法，格式为 `className::methodName` 或 `className::methodName(descriptor)` |
 | `type` | String | 注入类型，可选 `"before"` 或 `"replace"` |
-| `handler` | Function | 回调函数，签名为 `|self, args...| { ... }` |
+| `handler` | Function | 回调函数，签名为 `\|self, args...\| { ... }` |
 
 **目标格式**：
 
