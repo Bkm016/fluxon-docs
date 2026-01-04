@@ -31,6 +31,60 @@ description: "算术、比较、逻辑等运算符及其结合规则"
 | `<`    | 小于         | `&x < 0`          |
 | `>=`   | 大于等于     | `&n >= 1`         |
 | `<=`   | 小于等于     | `&n <= 100`       |
+| `is`   | 类型检查     | `&obj is string`  |
+
+### 类型检查运算符 `is`
+
+`is` 运算符用于运行时类型检查，返回布尔值：
+
+```fluxon
+result1 = "hello" is string    # true
+result2 = 123 is int            # true
+result3 = [1, 2, 3] is list     # true
+result4 = null is string        # false（null 始终返回 false）
+```
+
+**语法规则：**
+
+- 形式：`<expr> is <TypeName>`
+- 右侧必须是类型字面量，不能是表达式
+- 类型在解析期解析并缓存，运行时直接进行类型检查
+
+**支持的类型别名（不区分大小写）：**
+
+| 别名 | Java 类型 |
+|------|-----------|
+| `string` / `String` | `java.lang.String` |
+| `int` / `Int` | `java.lang.Integer` |
+| `long` / `Long` | `java.lang.Long` |
+| `float` / `Float` | `java.lang.Float` |
+| `double` / `Double` | `java.lang.Double` |
+| `boolean` / `Boolean` | `java.lang.Boolean` |
+| `list` / `List` | `java.util.List` |
+| `map` / `Map` | `java.util.Map` |
+| `set` / `Set` | `java.util.Set` |
+
+**使用完全限定类名：**
+
+```fluxon
+obj = new java.util.ArrayList()
+check = &obj is java.util.ArrayList    # true
+```
+
+**在 when 表达式中使用：**
+
+`is` 运算符可以在 `when` 表达式中作为分支匹配条件：
+
+```fluxon
+typeDesc = when &obj {
+    is string -> "文本"
+    is int -> "整数"
+    is list -> "列表"
+    else -> "其他类型"
+}
+```
+
+详见 [控制流](/language/control-flow) 章节。
 
 ### 逻辑运算符
 
@@ -88,7 +142,7 @@ Fluxon 的表达式解析采用自顶向下递归下降和优先级划分。
 | 乘除模                   | `*`、`/`、`%`                    |
 | 加减                     | `+`、`-`                         |
 | 范围运算符               | `..`、`..<`                      |
-| 比较运算符               | `> >= < <= == !=`                |
+| 比较与类型检查           | `> >= < <= == !=`、`is`          |
 | 逻辑与/或                | `&&`、`||`                       |
 | Elvis 运算符             | `?:`                             |
 | 赋值与复合赋值           | `=`、`+=`、`-=` 等               |

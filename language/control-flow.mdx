@@ -90,6 +90,56 @@ when &value {
 - 适合枚举值、常量分支、简单状态码等场景。
 - 同样支持 `else` 作为兜底分支。
 
+### 集合匹配
+
+`when` 支持使用 `in` 和 `!in` 检查值是否在集合、映射或区间内：
+
+```fluxon
+when &score {
+	in 0..59    -> "不及格"
+	in 60..79   -> "及格"
+	in 80..100  -> "优秀"
+	else        -> "无效分数"
+}
+```
+
+- `in <collection>` 检查主题值是否在集合中
+- `!in <collection>` 检查主题值是否不在集合中
+- 支持列表、映射、区间等可迭代值
+
+### 类型匹配
+
+`when` 支持使用 `is` 运算符进行类型检查：
+
+```fluxon
+when &obj {
+	is string -> "这是文本"
+	is int    -> "这是整数"
+	is list   -> "这是列表"
+	else      -> "未知类型"
+}
+```
+
+**类型匹配特性：**
+
+- 使用 `is <TypeName>` 进行运行时类型检查
+- 支持类型别名（不区分大小写）：`string`、`int`、`list`、`map` 等
+- 支持完全限定类名：`is java.util.ArrayList`
+- `null` 值不匹配任何类型，会进入 `else` 分支
+- 可与其他匹配类型混合使用：
+
+```fluxon
+when &value {
+	null       -> "空值"
+	is string  -> "文本类型"
+	42         -> "答案"
+	in 0..100  -> "数字范围"
+	else       -> "其他"
+}
+```
+
+详见 [运算符与优先级 - 类型检查](/language/operators-and-priority#类型检查运算符-is)。
+
 ### 与其他表达式组合
 
 `when` 是表达式，可以绑定为变量、作为函数返回值，或嵌入到更大的表达式中：
