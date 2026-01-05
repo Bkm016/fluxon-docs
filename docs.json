@@ -75,7 +75,7 @@
         "groups": [
           {
             "group": "API 入口",
-            "pages": ["developer/runtime-registry", "developer/commands", "developer/export-bridge"]
+            "pages": ["developer/runtime-registry", "developer/commands", "developer/domains", "developer/export-bridge"]
           },
           {
             "group": "扩展与注解",

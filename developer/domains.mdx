@@ -1,0 +1,280 @@
+---
+title: "Domain 接口"
+description: "用 DomainRegistry/DomainExecutor 实现控制流和闭包语义"
+---
+
+Domain 是 Fluxon 的"控制流扩展点"。
+它提供了比 `::` 上下文调用更强大的机制，允许执行器完全控制代码块的执行时机、方式和环境。
+
+Domain 的核心特性是**闭包语义**：执行器接收的是未求值的 AST，可以决定是否执行、何时执行、执行多少次。
+
+## 适用场景
+
+- 异步执行：`async { fetch("http://api.example.com") }`
+- 事务管理：`transaction { updateDatabase(); commit() }`
+- 重试逻辑：`retry { unstableOperation() }`
+- 结构化并发：`scope { async { task1() }; async { task2() } }`
+- 条件执行：`lazy { expensiveComputation() }`
+
+## 与其他机制的区别
+
+| 特性 | `::` 上下文调用 | Domain |
+| --- | --- | --- |
+| 语法 | `value :: block` | `domain block` |
+| 块执行 | 立即执行，无法延迟 | 执行器控制执行时机 |
+| 闭包语义 | 不支持（块立即求值） | 支持（接收未求值的 AST） |
+| 编译支持 | ✅ | ❌（仅解释执行） |
+| 适用场景 | 简单上下文传递 | 异步、事务、重试、结构化并发 |
+
+<Note>
+Domain 的字节码生成会抛 `UnsupportedOperationException`，因此含 domain 的脚本不要走
+[编译执行引擎](/runtime/execution-engine)。
+</Note>
+
+## 组成与执行流程
+
+| 组件 | 作用 |
+| --- | --- |
+| `DomainRegistry` | 注册表：`domainName -> DomainExecutor` |
+| `DomainExecutor` | 执行器：接收 `Environment` 和 `Supplier<Object>`（域体闭包） |
+| `DomainSyntaxMacro` | 内置语法宏：命中已注册标识符 |
+| `DomainExpression` | AST 节点：在解析时捕获 executor 和域体 AST |
+
+执行大致流程：
+
+1. Parser 读到 `IDENTIFIER`，`DomainSyntaxMacro` 发现已注册同名 domain。
+2. 先消费 domain 名称 token，再解析后续的块或表达式作为域体。
+3. 域体 AST 与 `DomainExecutor` 一起被封装进 `DomainExpression`。
+4. Interpreter 执行到该节点时，将域体包装为 `Supplier<Object>` 并调用 executor。
+
+## 注册与隔离
+
+### 使用全局主注册表（最常见）
+
+在应用启动时注册即可（建议注册阶段单线程）：
+
+```java
+DomainRegistry.primary().register("async", (env, body) -> {
+    return CompletableFuture.supplyAsync(body::get);
+});
+```
+
+### 为沙箱/多租户使用独立注册表
+
+如果你需要"每份脚本一套 domain 集合"，可以创建独立实例并放到 `CompilationContext`：
+
+```java
+DomainRegistry registry = new DomainRegistry();
+registry.register("async", (env, body) -> CompletableFuture.supplyAsync(body::get));
+
+CompilationContext ctx = new CompilationContext(source);
+ctx.setDomainRegistry(registry);
+
+Environment env = FluxonRuntime.getInstance().newEnvironment();
+List<ParseResult> ast = Fluxon.parse(env, ctx);
+Object result = Fluxon.eval(ast, env);
+```
+
+<Note>
+如果你也自定义了 `SyntaxMacroRegistry`，记得把 `DomainSyntaxMacro` 放进去；
+否则即使 registry 有 domain，解析器也不会命中。
+</Note>
+
+## 最小示例：实现 `retry`
+
+这个 domain 失败时最多重试 3 次：
+
+```java
+import org.tabooproject.fluxon.Fluxon;
+import org.tabooproject.fluxon.compiler.CompilationContext;
+import org.tabooproject.fluxon.parser.DomainRegistry;
+import org.tabooproject.fluxon.parser.ParseResult;
+import org.tabooproject.fluxon.runtime.Environment;
+import org.tabooproject.fluxon.runtime.FluxonRuntime;
+
+import java.util.List;
+
+public final class DomainDemo {
+
+  public static void main(String[] args) {
+    DomainRegistry registry = new DomainRegistry();
+    
+    registry.register("retry", (env, body) -> {
+      int maxAttempts = 3;
+      Exception lastException = null;
+      
+      for (int i = 0; i < maxAttempts; i++) {
+        try {
+          return body.get();  // 执行域体
+        } catch (Exception e) {
+          lastException = e;
+          System.out.println("Attempt " + (i + 1) + " failed: " + e.getMessage());
+        }
+      }
+      
+      throw new RuntimeException("All " + maxAttempts + " attempts failed", lastException);
+    });
+
+    String source = "retry { unstableOperation() }";
+    
+    CompilationContext ctx = new CompilationContext(source);
+    ctx.setDomainRegistry(registry);
+    
+    Environment env = FluxonRuntime.getInstance().newEnvironment();
+    // 注册一个会失败 2 次的函数
+    env.defineRootFunction("unstableOperation", new NativeFunction<>(null, funcCtx -> {
+      // 实际实现...
+      return "success";
+    }));
+    
+    List<ParseResult> ast = Fluxon.parse(env, ctx);
+    System.out.println(Fluxon.eval(ast, env));
+  }
+}
+```
+
+## 高级用法：通过 target 实现结构化并发
+
+Domain 可以通过 `Environment#setTarget(Object)` 设置上下文对象，使内部代码能够访问域的上下文。
+这是实现结构化并发、事务等协作模式的基础。
+
+### 示例：Scope + Async
+
+```java
+// 注册 scope 域：创建任务作用域
+registry.register("scope", (env, body) -> {
+    TaskScope scope = new TaskScope();
+    Object previousTarget = env.getTarget();
+    try {
+        env.setTarget(scope);  // 设置 target，使内部代码能访问 scope
+        Object result = body.get();
+        scope.join();  // 等待所有子任务完成
+        return result;
+    } finally {
+        env.setTarget(previousTarget);  // 恢复之前的 target
+    }
+});
+
+// 注册 async 域：检查是否在 scope 内
+registry.register("async", (env, body) -> {
+    Object target = env.getTarget();
+    
+    // 如果在 scope 内，将任务注册到 scope
+    if (target instanceof TaskScope) {
+        TaskScope scope = (TaskScope) target;
+        return scope.submit(() -> body.get());
+    }
+    
+    // 否则独立执行
+    return CompletableFuture.supplyAsync(body::get);
+});
+```
+
+在脚本中使用：
+
+```
+scope {
+    task1 = async { longOperation1() }  // 注册到 scope
+    task2 = async { longOperation2() }  // 注册到 scope
+    // scope.join() 自动等待所有任务完成
+}
+```
+
+### Target 类型检查约定
+
+推荐使用 `instanceof` 进行类型检查：
+
+```java
+Object target = env.getTarget();
+if (target instanceof TaskScope) {
+    TaskScope scope = (TaskScope) target;
+    // 使用 scope
+} else if (target instanceof TransactionContext) {
+    TransactionContext tx = (TransactionContext) target;
+    // 使用事务上下文
+}
+```
+
+## 常见模式
+
+### 1. 异步执行
+
+```java
+registry.register("async", (env, body) -> {
+    return CompletableFuture.supplyAsync(body::get);
+});
+```
+
+脚本：
+```
+future = async { fetch("http://api.example.com") }
+```
+
+### 2. 结果转换
+
+```java
+registry.register("double", (env, body) -> {
+    Object result = body.get();
+    if (result instanceof Number) {
+        return ((Number) result).intValue() * 2;
+    }
+    return result;
+});
+```
+
+脚本：
+```
+value = double { 21 }  // 返回 42
+```
+
+### 3. 条件执行（惰性求值）
+
+```java
+registry.register("lazy", (env, body) -> {
+    // 不执行 body，返回一个惰性求值的包装器
+    return new LazyValue(body);
+});
+```
+
+脚本：
+```
+lazyValue = lazy { expensiveComputation() }
+// 只有在需要时才执行
+```
+
+### 4. 环境修改
+
+```java
+registry.register("withContext", (env, body) -> {
+    env.assign("contextValue", "special-context", -1);
+    return body.get();
+});
+```
+
+脚本：
+```
+withContext {
+    print(&contextValue)  // 输出: special-context
+}
+```
+
+## 注意事项
+
+- **命名规则**：domain 名称是标识符（`IDENTIFIER`），允许包含 `-`（例如 `retry-3-times`）。
+- **命名冲突**：domain 的匹配发生在"标识符兜底"之前，
+  如果你注册了与函数/变量同名的 domain，会改变解析结果。
+- **闭包捕获**：域体是闭包，可以访问外部作用域的变量。
+- **异常处理**：
+  - 执行器内抛出的异常会传播到调用方。
+  - 建议抛出 `FluxonRuntimeError` 子类以获得 SourceTrace。
+- **线程安全**：
+  - `DomainExecutor` 可能在多线程环境下被并发调用，应保证无状态或正确处理并发访问。
+  - `Environment` 不是线程安全的，异步执行时需要创建新的环境或使用同步机制。
+
+## 相关链接
+
+- [Command 接口](/developer/commands) - 用于自定义 DSL 语法的扩展机制
+- [运行时注册 API](/developer/runtime-registry)
+- [扩展函数 API](/developer/extension-api)
+- [命令行与 REPL](/guides/cli)
+- [编译执行引擎](/runtime/execution-engine)

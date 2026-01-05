@@ -15,26 +15,28 @@ Fluxon 默认不内置任何 command：是否存在、叫什么名字、怎么�
 - 你需要自定义参数语法（不仅是 `func(a, b)` 这种固定形态）。
 - 你想把宿主侧的“指令/动作”封装成脚本表达式并返回结果。
 
-## 与函数/扩展函数的区别
+## 与其他机制的区别
 
-| 机制 | 调用形态 | 主要入口 | 是否可编译 |
-| --- | --- | --- | --- |
-| 函数 | `func(1, 2)` | `FluxonRuntime#registerFunction` | ✅ |
-| 扩展函数 | `target::method(...)` | `FluxonRuntime#registerExtension` | ✅ |
-| Command | `command arg...` | `CommandRegistry#register` | ❌（仅解释执行） |
+| 机制 | 调用形态 | 主要入口 | 是否可编译 | 适用场景 |
+| --- | --- | --- | --- | --- |
+| 函数 | `func(1, 2)` | `FluxonRuntime#registerFunction` | ✅ | 普通函数调用 |
+| 扩展函数 | `target::method(...)` | `FluxonRuntime#registerExtension` | ✅ | 上下文传递 |
+| Command | `command arg...` | `CommandRegistry#register` | ❌ | 自定义 DSL 语法 |
+| Domain | `domain { ... }` | `DomainRegistry#register` | ❌ | 控制流、闭包 |
 
 <Note>
 Command 的字节码生成会抛 `UnsupportedOperationException`，因此含 command 的脚本不要走
-[编译执行引擎](/runtime/execution-engine)。
+[编译执行引擎](/runtime/execution-engine)。如需控制流和闭包语义，请使用 [Domain](/developer/domains)。
 </Note>
 
 ## 组成与执行流程
 
 | 组件 | 作用 |
 | --- | --- |
-| `CommandRegistry` | 注册表：`commandName -> (parser, executor)` |
+| `CommandRegistry` | 注册表：`commandName -> CommandHandler` |
+| `CommandHandler<T>` | 封装 parser 和 executor，保证类型一致性 |
 | `CommandParser<T>` | 解析阶段：消费 token，并返回解析结果 `T` |
-| `CommandExecutor<T>` | 执行阶段：拿到 `Interpreter` 与解析结果 `T` 执行业务 |
+| `CommandExecutor<T>` | 执行阶段：拿到 `Environment` 与解析结果 `T` 执行业务 |
 | `CommandSyntaxMacro` | 内置语法宏：命中已注册标识符（优先级 1000） |
 | `CommandExpression` | AST 节点：在解析时捕获 executor，运行时直接调用 |
 
@@ -76,21 +78,19 @@ Object result = Fluxon.eval(ast, env);
 否则即使 registry 有 command，解析器也不会命中。
 </Note>
 
-## 最小示例：实现 `set-var`
+## 最小示例：实现 `give-item`
 
-这个 command 语法为：`set-var <name> <valueExpr>`。
-它把 `<valueExpr>` 求值后写入根变量，并返回该值。
+这个 command 语法为：`give-item <itemName> <amount>`。
+它解析物品名称和数量，并返回操作结果。
 
 ```java
 import org.tabooproject.fluxon.Fluxon;
 import org.tabooproject.fluxon.compiler.CompilationContext;
-import org.tabooproject.fluxon.lexer.Token;
 import org.tabooproject.fluxon.lexer.TokenType;
 import org.tabooproject.fluxon.parser.CommandExecutor;
 import org.tabooproject.fluxon.parser.CommandParser;
 import org.tabooproject.fluxon.parser.CommandRegistry;
 import org.tabooproject.fluxon.parser.ParseResult;
-import org.tabooproject.fluxon.parser.Parser;
 import org.tabooproject.fluxon.runtime.Environment;
 import org.tabooproject.fluxon.runtime.FluxonRuntime;
 
@@ -98,35 +98,33 @@ import java.util.List;
 
 public final class CommandDemo {
 
-  static final class SetVarData {
-    final String name;
-    final ParseResult valueExpr;
+  static final class GiveItemData {
+    final String itemName;
+    final int amount;
 
-    SetVarData(String name, ParseResult valueExpr) {
-      this.name = name;
-      this.valueExpr = valueExpr;
+    GiveItemData(String itemName, int amount) {
+      this.itemName = itemName;
+      this.amount = amount;
     }
   }
 
   public static void main(String[] args) {
-    CommandParser<SetVarData> parser = (Parser p, Token commandToken) -> {
-      String name = p.consume(TokenType.IDENTIFIER, "Expected variable name").getLexeme();
-      ParseResult valueExpr = p.parseExpression();
-      return new SetVarData(name, valueExpr);
+    CommandParser<GiveItemData> parser = (p, commandToken) -> {
+      String itemName = p.consume(TokenType.STRING, "Expected item name").getLexeme();
+      int amount = (int) p.consume(TokenType.INTEGER, "Expected amount").getValue();
+      return new GiveItemData(itemName, amount);
     };
 
-    CommandExecutor<SetVarData> executor = (interpreter, data) -> {
-      Object value = interpreter.evaluate(data.valueExpr);
-      interpreter.getEnvironment().defineRootVariable(data.name, value);
-      return value;
+    CommandExecutor<GiveItemData> executor = (env, data) -> {
+      return "Gave " + data.amount + "x " + data.itemName;
     };
 
-    CommandRegistry.primary().register("set-var", parser, executor);
+    CommandRegistry.primary().register("give-item", parser, executor);
 
-    String source = "set-var username \\\"fluxon\\\"; &username";
+    String source = "give-item \"diamond\" 64";
     Environment env = FluxonRuntime.getInstance().newEnvironment();
     List<ParseResult> ast = Fluxon.parse(env, new CompilationContext(source));
-    System.out.println(Fluxon.eval(ast, env));
+    System.out.println(Fluxon.eval(ast, env));  // 输出: Gave 64x diamond
   }
 }
 ```
@@ -144,6 +142,7 @@ public final class CommandDemo {
 
 ## 相关链接
 
+- [Domain 接口](/developer/domains) - 用于控制流和闭包的扩展机制
 - [运行时注册 API](/developer/runtime-registry)
 - [扩展函数 API](/developer/extension-api)
 - [命令行与 REPL](/guides/cli)
